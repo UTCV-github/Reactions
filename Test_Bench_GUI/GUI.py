@@ -10,7 +10,7 @@ import pandas as pd
 
 # Configure the serial port that connects the Arduino
 ser = serial.Serial('COM6', 9600, timeout=1)
-time.sleep(1)
+time.sleep(1) # Pause for 1 sencond to wait for response from the Arduino
 sg.popup(ser.readline())
 
 # Define the function that send command to the Arduino
@@ -27,6 +27,7 @@ def save_csv(Date, Test_bench, KOH, Trial, Data_list, save_path):
     # csv_writer.writerows(Data_list)
     Data_list.to_csv(file_name, index = False)
 
+# Define the function that reads a line of Arduino output and return the readings of each parameter
 def read_output(output):
     # Example output: b"R:365 G:117 B:76 C:590 cur_avg590 prev_avg590 read_idx8 Time:3.0889999866 Measured Time: 0.0000000000 \r\n"
     output = output.decode("utf-8")
@@ -43,7 +44,7 @@ def read_output(output):
         time = float(result[7][5:])
         Measured_time = float(result[10])
         # Compile the results into a dataframe
-        d = {'R': [R], 'G': [G], 'B': [B], 'C': C, 'cur_avg': [cur_avg], 'prev_avg': [prev_avg], 'read_idx': [read_idx], 'time': [time], 'measured_time': Measured_time}
+        d = {'R': [R], 'G': [G], 'B': [B], 'C': [C], 'cur_avg': [cur_avg], 'prev_avg': [prev_avg], 'read_idx': [read_idx], 'time': [time], 'measured_time': [Measured_time]}
         df = pd.DataFrame(data=d)
         return df
     # return the reaction time if the output is "measured time"
@@ -61,33 +62,75 @@ layout_1 = [
     [sg.Text('KOH Concentration', size =(15, 1)), sg.InputText(key = "-KOHConc-", do_not_clear=True)],
     [sg.Text('Trial', size =(15, 1)), sg.InputText(key = "-trial-", do_not_clear=True)],
     [sg.Text('Arduino Command'), sg.Combo(values=["s", "t"], size = (15,1), key = "-Arduino_Comand-")],
-    [sg.Button("Run"), sg.Button("Save as csv")]
+    [sg.Button("Run"), sg.Button("Save as csv"), sg.Button("See Results"), sg.Button("Pause")] 
     ]
+
+
+# Construct the layout of the result table window
+result_table = []
+headings_table = ['R', 'G', 'B', 'C', 'time', 'measured_time']
+layout_table = [
+    [sg.Table( values = result_table,
+    headings = headings_table,
+    max_col_width=40,
+                auto_size_columns=True,
+                display_row_numbers=True,
+                justification='middle',
+                num_rows=20,
+                key = '-ResultTable-',
+                row_height=30
+    )]
+]
 
 # Create the window
 font = ("Arial", 20)
-window = sg.Window(title="Reactions Test Bench GUI Demo", layout = layout_1, size=(800, 500), font = font)
+window1 = sg.Window(title = "Reactions Test Bench GUI Demo", layout = layout_1, size=(800, 500), font = font, finalize=True)
+window_result = None
 
+# Open Pyplot interactive tool
 plt.ion()
 fig = plt.figure()
-i = 0
+plt.xlabel("Time (s)")
+plt.ylabel("C value")
 
 # Create an event loop
 while True:
 
-    event, values = window.read()
-    # End program if user closes window or
+    # Pop up the window
+    # event, values = window1.read()
+    window, event, values = sg.read_all_windows()
+
+    # End program if user closes window
+    
+    # if event == sg.WIN_CLOSED:
+    #     break
+
     if event == sg.WIN_CLOSED:
-        break
+        window.close()
+        if window == window_result:       # if closing win 2, mark as closed
+            window_result = None
+        elif window == window1:     # if closing win 1, exit program
+            break
+
+    # Pop up result table
+    elif event == "See Results" and not window_result:
+        window_result = sg.Window(title = "Sensor Reading", layout=layout_table, size=(800, 600), font = font, finalize=True)
+
     # Save the data as a csv file using the designated path
     elif event == "Save as csv":
-        # Data_list = [[1,2,3,4,5,6]]
-        save_csv(values["-Date-"], values["-TestBench-"], values["-KOHConc-"], values["-trial-"], df_cb, values["-FOLDER-"])
-        sg.popup("csv file saved for test bench" + values["-TestBench-"][0], "The csv file is save at: " + values["-FOLDER-"])
+        if 'df_cb' in globals():
+            # Data_list = [[1,2,3,4,5,6]]
+            save_csv(values["-Date-"], values["-TestBench-"], values["-KOHConc-"], values["-trial-"], df_cb, values["-FOLDER-"])
+            sg.popup("csv file saved for test bench" + values["-TestBench-"][0], "The csv file is save at: " + values["-FOLDER-"])
+        else:
+            sg.popup("No data has been received", title = "Error Message")
+
+    # Send command to Arduino and show realtime sensor readings in a plot    
     elif event == "Run":
         Arduino_Run(values["-Arduino_Comand-"][0])
         measured_time = 0 # initialized the reaction time
         df_cb = [] # create a list to temporarily hold all dataframes 
+        result_table = [] # Initialize the result table again
 
         # Reads output
         while True: 
@@ -98,18 +141,26 @@ while True:
             elif type(result) == pd.DataFrame:
                 df_cb.append(result)
                 plt.scatter(float(result.time), int(result.C))
-                plt.xlabel("Time (s)")
-                plt.ylabel("C value")
                 plt.show()
                 plt.pause(0.001)
+                if result_table != None: 
+                    result_table_row = [int(result['R']), int(result['G']), int(result['B']), int(result['C']), float(result['time']), float(result['measured_time'])]
+                    result_table.append(result_table_row)
+                    window_result['-ResultTable-'].update(result_table)
+
                 if measured_time != 0 and int(result.measured_time) == 0:
                     break
             else:
                 sg.popup("Unknown error happen during reading Arduino data", title = "Error Message")
                 break
+            
+            # Add Pause buttom to stop the program
+            if event == "Pause":
+                break
+
         df_cb = pd.concat(df_cb, axis=0, ignore_index=True) # df_cb is the dataframe that stores all data points
 
         # time.sleep(1)
         sg.popup(str(df_cb), title = "Output")
-
-window.close()
+ 
+window1.close()
