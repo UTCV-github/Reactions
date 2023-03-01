@@ -11,7 +11,11 @@ import pandas as pd
 # Configure the serial port that connects the Arduino
 ser = serial.Serial('COM6', 9600, timeout=1)
 time.sleep(1) # Pause for 1 sencond to wait for response from the Arduino
-sg.popup(ser.readline())
+msg = ser.readline()
+if msg.decode('utf-8')[:-2] == 'Found sensor':
+    sg.popup("Sensor is working properly")
+else:
+    sg.popup("Sensor not detected, please check your connection")
 
 # Define the function that send command to the Arduino
 def Arduino_Run(command):
@@ -62,25 +66,28 @@ layout_1 = [
     [sg.Text('KOH Concentration', size =(15, 1)), sg.InputText(key = "-KOHConc-", do_not_clear=True)],
     [sg.Text('Trial', size =(15, 1)), sg.InputText(key = "-trial-", do_not_clear=True)],
     [sg.Text('Arduino Command'), sg.Combo(values=["s", "t"], size = (15,1), key = "-Arduino_Comand-")],
-    [sg.Button("Run"), sg.Button("Save as csv"), sg.Button("See Results"), sg.Button("Pause")] 
+    [sg.Button("Run"), sg.Button("Save as csv"), sg.Button("See Results"), sg.Button("Pause"), sg.Button("Clear")] 
     ]
 
 
 # Construct the layout of the result table window
 result_table = []
 headings_table = ['R', 'G', 'B', 'C', 'time', 'measured_time']
-layout_table = [
-    [sg.Table( values = result_table,
-    headings = headings_table,
-    max_col_width=40,
-                auto_size_columns=True,
-                display_row_numbers=True,
-                justification='middle',
-                num_rows=20,
-                key = '-ResultTable-',
-                row_height=30
-    )]
-]
+def make_result_window(headings_table): 
+    layout_table = [
+        [sg.Table( values = result_table,
+                    headings = headings_table,
+                    max_col_width=40,
+                    auto_size_columns=False,
+                    def_col_width=20,
+                    display_row_numbers=True,
+                    justification='middle',
+                    num_rows=20,
+                    key = '-ResultTable-',
+                    row_height=30
+        )]
+    ]
+    return sg.Window(title = "Sensor Reading", layout=layout_table, size=(800, 600), font = font, finalize=True, resizable=True)
 
 # Create the window
 font = ("Arial", 20)
@@ -114,7 +121,12 @@ while True:
 
     # Pop up result table
     elif event == "See Results" and not window_result:
-        window_result = sg.Window(title = "Sensor Reading", layout=layout_table, size=(800, 600), font = font, finalize=True)
+        window_result = make_result_window(headings_table)
+        table = window_result['-ResultTable-']
+        table_widget = table.Widget
+        table.expand(expand_x=True, expand_y=True)          # Expand table in both directions of 'x' and 'y'
+        for cid in headings_table:
+            table_widget.column(cid, stretch=True)          # Set column stretchable when window resiz
 
     # Save the data as a csv file using the designated path
     elif event == "Save as csv":
@@ -140,27 +152,39 @@ while True:
                 measured_time = result
             elif type(result) == pd.DataFrame:
                 df_cb.append(result)
-                plt.scatter(float(result.time), int(result.C))
+                plt.scatter(float(result.time), int(result.C), color = 'lightblue')
                 plt.show()
-                plt.pause(0.001)
+                plt.pause(0.01)
                 if result_table != None: 
                     result_table_row = [int(result['R']), int(result['G']), int(result['B']), int(result['C']), float(result['time']), float(result['measured_time'])]
                     result_table.append(result_table_row)
                     window_result['-ResultTable-'].update(result_table)
 
+                    table_widget.yview_moveto(1)
+
                 if measured_time != 0 and int(result.measured_time) == 0:
+                    sg.popup("The reaction has reached the endpoint", title = "Reaction Message")
                     break
             else:
                 sg.popup("Unknown error happen during reading Arduino data", title = "Error Message")
                 break
             
             # Add Pause buttom to stop the program
+            event, values = window1.read(timeout=10)
             if event == "Pause":
+                Arduino_Run("t")
                 break
 
         df_cb = pd.concat(df_cb, axis=0, ignore_index=True) # df_cb is the dataframe that stores all data points
 
+    elif event == "Clear":
+        ser.reset_output_buffer()
+        df_cb = [] # create a list to temporarily hold all dataframes 
+        result_table = [] # Initialize the result table again
+        if result_table != None: 
+            window_result['-ResultTable-'].update(result_table)
+
         # time.sleep(1)
-        sg.popup(str(df_cb), title = "Output")
+        # sg.popup(str(df_cb), title = "Output")
  
 window1.close()
