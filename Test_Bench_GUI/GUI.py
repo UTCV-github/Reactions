@@ -12,7 +12,7 @@ import pandas as pd
 ser = serial.Serial('COM6', 9600, timeout=1)
 time.sleep(1) # Pause for 1 sencond to wait for response from the Arduino
 msg = ser.readline()
-if msg.decode('utf-8')[:-2] == 'Found sensor':
+if msg.decode('utf-8').rstrip() == 'Found sensor':
     sg.popup("Sensor is working properly")
 else:
     sg.popup("Sensor not detected, please check your connection")
@@ -36,17 +36,28 @@ def read_output(output):
     # Example output: b"R:365 G:117 B:76 C:590 cur_avg590 prev_avg590 read_idx8 Time:3.0889999866 Measured Time: 0.0000000000 \r\n"
     output = output.decode("utf-8")
     output = output[0:-5] # remove " \n\r" at the end of the string
-    result = output.split()
+    result = output.split(',')
     if len(result) > 3:
-        R = int(result[0][2:])
-        G = int(result[1][2:])
-        B = int(result[2][2:])
-        C = int(result[3][2:])
-        cur_avg = int(result[4][7:])
-        prev_avg = int(result[5][8:])
-        read_idx = int(result[6][8:])
-        time = float(result[7][5:])
-        Measured_time = float(result[10])
+        # R = int(result[0][2:])
+        # G = int(result[1][2:])
+        # B = int(result[2][2:])
+        # C = int(result[3][2:])
+        # cur_avg = int(result[4][7:])
+        # prev_avg = int(result[5][8:])
+        # read_idx = int(result[6][8:])
+        # time = float(result[7][5:])
+        # Measured_time = float(result[8][14:])
+
+        R = result[0][2:]
+        G = result[1][2:]
+        B = result[2][2:]
+        C = result[3][2:]
+        cur_avg = result[4][7:]
+        prev_avg = result[5][8:]
+        read_idx = result[6][8:]
+        time = result[7][5:]
+        Measured_time = result[8][14:]
+
         # Compile the results into a dataframe
         d = {'R': [R], 'G': [G], 'B': [B], 'C': [C], 'cur_avg': [cur_avg], 'prev_avg': [prev_avg], 'read_idx': [read_idx], 'time': [time], 'measured_time': [Measured_time]}
         df = pd.DataFrame(data=d)
@@ -79,7 +90,7 @@ def make_result_window(headings_table):
                     headings = headings_table,
                     max_col_width=40,
                     auto_size_columns=False,
-                    def_col_width=20,
+                    def_col_width=10,
                     display_row_numbers=True,
                     justification='middle',
                     num_rows=20,
@@ -90,15 +101,15 @@ def make_result_window(headings_table):
     return sg.Window(title = "Sensor Reading", layout=layout_table, size=(800, 600), font = font, finalize=True, resizable=True)
 
 # Create the window
-font = ("Arial", 20)
+font = ("Arial", 16)
 window1 = sg.Window(title = "Reactions Test Bench GUI Demo", layout = layout_1, size=(800, 500), font = font, finalize=True)
 window_result = None
 
 # Open Pyplot interactive tool
-plt.ion()
-fig = plt.figure()
-plt.xlabel("Time (s)")
-plt.ylabel("C value")
+# plt.ion()
+# fig = plt.figure()
+# plt.xlabel("Time (s)")
+# plt.ylabel("C value")
 
 # Create an event loop
 while True:
@@ -152,15 +163,15 @@ while True:
                 measured_time = result
             elif type(result) == pd.DataFrame:
                 df_cb.append(result)
-                plt.scatter(float(result.time), int(result.C), color = 'lightblue')
-                plt.show()
-                plt.pause(0.01)
+                # plt.scatter(float(result.time), int(result.C), color = 'lightblue')
+                # plt.show()
+                # plt.pause(0.001)
                 if result_table != None: 
-                    result_table_row = [int(result['R']), int(result['G']), int(result['B']), int(result['C']), float(result['time']), float(result['measured_time'])]
+                    result_table_row = [result.iloc[0]['R'], result.iloc[0]['G'], result.iloc[0]['B'], result.iloc[0]['C'], result.iloc[0]['time'], result.iloc[0]['measured_time']]
                     result_table.append(result_table_row)
                     window_result['-ResultTable-'].update(result_table)
 
-                    table_widget.yview_moveto(1)
+                    table_widget.yview_moveto(1) # Always show the last row of the table
 
                 if measured_time != 0 and int(result.measured_time) == 0:
                     sg.popup("The reaction has reached the endpoint", title = "Reaction Message")
@@ -170,14 +181,15 @@ while True:
                 break
             
             # Add Pause buttom to stop the program
-            event, values = window1.read(timeout=10)
+            event, values = window1.read(timeout=1)
             if event == "Pause":
                 Arduino_Run("t")
                 break
-
-        df_cb = pd.concat(df_cb, axis=0, ignore_index=True) # df_cb is the dataframe that stores all data points
+        if len(df_cb) != 0: 
+            df_cb = pd.concat(df_cb, axis=0, ignore_index=True) # df_cb is the dataframe that stores all data points
 
     elif event == "Clear":
+        Arduino_Run("t")
         ser.reset_output_buffer()
         df_cb = [] # create a list to temporarily hold all dataframes 
         result_table = [] # Initialize the result table again
