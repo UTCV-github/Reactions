@@ -1,9 +1,6 @@
-// Updated on Feb.26.2023 by Fred Feng
-
 #include <Wire.h>
 #include "Adafruit_TCS34725.h"
 #include "Keyboard.h" 
-
 float threshold = 4;
 float startTime;
 float currentTime;
@@ -167,7 +164,7 @@ if(Started){
     }else{
       if((ending <1) & (first_diff > threshold)){
         // Car motor initialization
-        Serial.print("Measured Time: ");
+        Serial.print("Measured_Time: ");
         Serial.print(timeDiff/1000, DEC);
         Serial.println(" ");
         // // Car motor initialization
@@ -209,15 +206,15 @@ if(Started){
 //        digitalWrite(stirrer_rev, LOW);
 //        Started = 0;
 //    }
-    Serial.print("R:"); Serial.print(r, DEC); Serial.print(" ");
-    Serial.print("G:"); Serial.print(g, DEC); Serial.print(" ");
-    Serial.print("B:"); Serial.print(b, DEC); Serial.print(" ");
-    Serial.print("C:"); Serial.print(c, DEC); Serial.print(" ");
-    Serial.print("cur_avg"); Serial.print(cur_avg, DEC); Serial.print(" ");
-    Serial.print("prev_avg"); Serial.print(prev_avg, DEC); Serial.print(" ");
-    Serial.print("read_idx"); Serial.print(read_idx, DEC); Serial.print(" ");
-    Serial.print("Time:"); Serial.print(timeDiff/1000, DEC); Serial.print(" ");
-    Serial.print("Measured Time: "); Serial.print(measured_time/1000, DEC); Serial.print(" ");
+    Serial.print("R:"); Serial.print(r, DEC); Serial.print(",");
+    Serial.print("G:"); Serial.print(g, DEC); Serial.print(",");
+    Serial.print("B:"); Serial.print(b, DEC); Serial.print(",");
+    Serial.print("C:"); Serial.print(c, DEC); Serial.print(",");
+    Serial.print("cur_avg"); Serial.print(cur_avg, DEC); Serial.print(",");
+    Serial.print("prev_avg"); Serial.print(prev_avg, DEC); Serial.print(",");
+    Serial.print("read_idx"); Serial.print(read_idx, DEC); Serial.print(",");
+    Serial.print("Time:"); Serial.print(timeDiff/1000, DEC); Serial.print(",");
+    Serial.print("Measured_Time:"); Serial.print(measured_time/1000, DEC); Serial.print(" ");
     Serial.println(" ");
   }
 }
