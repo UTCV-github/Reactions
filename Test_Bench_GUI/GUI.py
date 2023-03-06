@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 
 font = ("Arial", 16)
+font_2 = ("Arial", 20)
 
 # Configure the serial port that connects the Arduino
 ports = serial.tools.list_ports.comports() # Get a COM port list
@@ -29,7 +30,7 @@ if len(Arduino_port) < 1:
 
 layout_config = [
     [sg.Text('Port'), sg.Combo(values = ports_list,  default_value = Arduino_port[0],size = (40,1), key = "-COM_Port-")],
-    [sg.Text('Baud'), sg.Combo(values = [9600],  default_value = 9600,size = (20,1), key = "-Baud-")],
+    [sg.Text('Baud'), sg.Combo(values = [9600], default_value = 9600,size = (20,1), key = "-Baud-")],
     [sg.Button("OK"), sg.Button("Exit")] 
     ]
 
@@ -57,12 +58,13 @@ def Arduino_Run(command):
 
 # Define the function that saves the data as csv file(s)
 def save_csv(Date, Test_bench, KOH, Trial, Data_list, save_path):
-    Date = datetime.strptime(Date, '%Y-%m-%d %H:%M:%S')
-    Date = datetime.strftime(Date, '%Y-%m-%d-%H%M%S')
+    # Date = datetime.strptime(Date, '%Y-%m-%d %H:%M:%S')
+    # Date = datetime.strftime(Date, '%Y-%m-%d-%H%M%S')
+
+    Date = datetime.strptime(Date, '%Y-%m-%d')
+    Date = datetime.strftime(Date, '%Y-%m-%d')
     file_name = save_path + "/" + Date + "_" + Test_bench + "_" + KOH + "_" + Trial + ".csv"
-    # f = open(file_name, "x")
-    # csv_writer = csv.writer(f)
-    # csv_writer.writerows(Data_list)
+
     Data_list.to_csv(file_name, index = False)
 
 # Define the function that reads a line of Arduino output and return the readings of each parameter
@@ -107,11 +109,11 @@ layout_1 = [
     [sg.Text("This is a UTCV Reactions GUI demo")], 
     [sg.Text("File save path"), sg.InputText(size=(25, 1), enable_events=True, key="-FOLDER-"), sg.FolderBrowse()],
     [sg.Text('Test Bench (A/B/C)', size =(15, 1)), sg.InputText(key = "-TestBench-", do_not_clear=True)],
-    # [sg.Text("Date"), sg.Input(key = "-Date-", size=(20,1)), sg.CalendarButton("Date", close_when_date_chosen=True, target="-Date-", format='%Y-%m-%d')],
-    [sg.Text("Date"), sg.Input(key = "-Date-", size=(20,1)), sg.CalendarButton("Date", close_when_date_chosen=True, target="-Date-")],
+    # [sg.Text("Date"), sg.Input(key = "-Date-", size=(20,1)), sg.CalendarButton("Date", close_when_date_chosen=True, target="-Date-")], # Not working if sg.read_all_windows() is used
+    [sg.Text("Date"), sg.Input(key = "-Date-", size=(20,1)), sg.Button('Date')],
     [sg.Text('KOH Concentration', size =(15, 1)), sg.InputText(key = "-KOHConc-", do_not_clear=True)],
     [sg.Text('Trial', size =(15, 1)), sg.InputText(key = "-trial-", do_not_clear=True)],
-    [sg.Text('Arduino Command'), sg.Combo(values=["s", "t"], size = (15,1), key = "-Arduino_Comand-")],
+    [sg.Text('Arduino Command'), sg.Combo(values=["s", "t"], default_value = "s", size = (15,1), key = "-Arduino_Comand-")],
     [sg.Button("Run"), sg.Button("Save as csv"), sg.Button("See Results"), sg.Button("Pause"), sg.Button("Clear"), sg.Button("Reset")] 
     ]
 
@@ -121,6 +123,8 @@ result_table = []
 headings_table = ['R', 'G', 'B', 'C', 'time', 'measured_time']
 def make_result_window(headings_table): 
     layout_table = [
+        [sg.Text('Reaction time: ', font = font), sg.Text('NA', font = font_2, key = '-ReactionTime-')],  # Add stop watch
+        [sg.Text('Stop time: ', font = font), sg.Text('NA', font = font_2, key = '-StopTime-')], # Indicate total reaction time once the reaction stops
         [sg.Table( values = result_table,
                     headings = headings_table,
                     max_col_width=40,
@@ -164,6 +168,12 @@ while True:
             window_result = None
         elif window == window1:         # if closing win 1, exit program
             break
+    
+    elif event == "Date":
+        date = sg.popup_get_date()
+        if date:
+            month, day, year = date
+            window['-Date-'].update(f"{year}-{month:0>2d}-{day:0>2d}")
 
     # Pop up result table
     elif event == "See Results" and not window_result:
@@ -192,6 +202,8 @@ while True:
             measured_time = 0   # initialized the reaction time
             df_cb = []          # create a list to temporarily hold all dataframes 
             result_table = []   # Initialize the result table again
+            plt.xlabel("Time (s)")
+            plt.ylabel("C value")
 
             # Reads output
             while True: 
@@ -204,18 +216,25 @@ while True:
                     # plt.scatter(float(result.time), int(result.C), color = 'lightblue')
                     # plt.show()
                     # plt.pause(0.001)
-                    dot, = ax.plot(float(result.time), int(result.C),'.', color = 'lightblue')
+                    dot, = ax.plot(float(result.time), int(result.C),'.', color = 'lightblue', markersize = 5)
                     ax.draw_artist(dot)
-                    fig.canvas.blit(fig.bbox)
+                    fig.canvas.blit(fig.bbox) 
 
                     if result_table != None: 
                         result_table_row = [result.iloc[0]['R'], result.iloc[0]['G'], result.iloc[0]['B'], result.iloc[0]['C'], result.iloc[0]['time'], result.iloc[0]['measured_time']]
                         result_table.append(result_table_row)
                         window_result['-ResultTable-'].update(result_table)
+                        window_result['-ReactionTime-'].update(result.iloc[0]['time'])
 
                         table_widget.yview_moveto(1) # Always show the last row of the table
 
-                    if measured_time != 0 and int(result.measured_time) == 0:
+                    if measured_time != 0 and float(result.measured_time) != 0: # When the endpoint of the reaction is detected
+                        # dot, = ax.axvline(x = float(measured_time), ymin = 0, ymax = int(result['C']), color = 'red')
+                        # ax.draw_artist(dot)
+                        # fig.canvas.blit(fig.bbox) 
+                        window_result['-StopTime-'].update(measured_time)
+
+                    if measured_time != 0 and float(result.measured_time) == 0: # When Arduino stop printing output (The last line of the output end with "Measured_Time: 0.0000000000" )
                         sg.popup("The reaction has reached the endpoint at " + str(measured_time) + "s", title = "Reaction Message")
                         break
                 else:
@@ -247,9 +266,11 @@ while True:
         # sg.popup(str(df_cb), title = "Output")
     
     elif event == "Reset":
+        window_result['-ReactionTime-'].update('NA') # Clear Reaction timer
+        ax.cla()  # Clear the plot
         Arduino_Run("t")
         time.sleep(0.1)
-        ser.close()
+        ser.close() # Restart serial port
         ser.open()
         time.sleep(1)
         msg = ser.readline()
