@@ -60,10 +60,11 @@ def Arduino_Run(command):
 def save_csv(Date, Test_bench, KOH, Trial, Data_list, save_path):
     # Date = datetime.strptime(Date, '%Y-%m-%d %H:%M:%S')
     # Date = datetime.strftime(Date, '%Y-%m-%d-%H%M%S')
-
-    Date = datetime.strptime(Date, '%Y-%m-%d')
-    Date = datetime.strftime(Date, '%Y-%m-%d')
-    file_name = save_path + "/" + Date + "_" + Test_bench + "_" + KOH + "_" + Trial + ".csv"
+    current_time = datetime.now()
+    current_time = datetime.strftime(current_time, '%H%M%S') # Convert time format into a string
+    Date = datetime.strptime(Date, '%Y-%m-%d') # Convert string format into a time format
+    Date = datetime.strftime(Date, '%Y%m%d')
+    file_name = save_path + "/" + Date + "_" + current_time + "_" + Test_bench + "_" + KOH + "_" + Trial + ".csv"
 
     Data_list.to_csv(file_name, index = False)
 
@@ -105,14 +106,15 @@ def read_output(output):
         return float(measured_time)
 
 # Construct the layout of the GUI window
+previous_trial = 'NA'
 layout_1 = [
     [sg.Text("This is a UTCV Reactions GUI demo")], 
     [sg.Text("File save path"), sg.InputText(size=(25, 1), enable_events=True, key="-FOLDER-"), sg.FolderBrowse()],
-    [sg.Text('Test Bench (A/B/C)', size =(15, 1)), sg.InputText(key = "-TestBench-", do_not_clear=True)],
+    [sg.Text('Test Bench (A/B/C)', size =(15, 1)), sg.Combo(values=["A", "B", "C"], default_value = "A", size=(15,1))],
     # [sg.Text("Date"), sg.Input(key = "-Date-", size=(20,1)), sg.CalendarButton("Date", close_when_date_chosen=True, target="-Date-")], # Not working if sg.read_all_windows() is used
     [sg.Text("Date"), sg.Input(key = "-Date-", size=(20,1)), sg.Button('Date')],
-    [sg.Text('KOH Concentration', size =(15, 1)), sg.InputText(key = "-KOHConc-", do_not_clear=True)],
-    [sg.Text('Trial', size =(15, 1)), sg.InputText(key = "-trial-", do_not_clear=True)],
+    [sg.Text('KOH Concentration', size =(15, 1)), sg.InputText(key = "-KOHConc-", do_not_clear=True, size=(20,1))],
+    [sg.Text('Trial', size =(15, 1)), sg.InputText(key = "-trial-", do_not_clear=True, size=(15,1)), sg.Text('Previous trial: '), sg.Text(previous_trial, key = '-PreviousTrial-')],
     [sg.Text('Arduino Command'), sg.Combo(values=["s", "t"], default_value = "s", size = (15,1), key = "-Arduino_Comand-")],
     [sg.Button("Run"), sg.Button("Save as csv"), sg.Button("See Results"), sg.Button("Pause"), sg.Button("Clear"), sg.Button("Reset")] 
     ]
@@ -140,7 +142,7 @@ def make_result_window(headings_table):
     return sg.Window(title = "Sensor Reading", layout=layout_table, size=(800, 600), font = font, finalize=True, resizable=True)
 
 # Create the window
-window1 = sg.Window(title = "Reactions Test Bench GUI Demo", layout = layout_1, size=(800, 500), font = font, finalize=True)
+window1 = sg.Window(title = "Reactions Test Bench GUI Demo", layout = layout_1, size=(600, 400), font = font, finalize=True)
 window_result = None
 
 # Open Pyplot interactive tool
@@ -189,6 +191,8 @@ while True:
         if 'df_cb' in globals():
             # Data_list = [[1,2,3,4,5,6]]
             save_csv(values["-Date-"], values["-TestBench-"], values["-KOHConc-"], values["-trial-"], df_cb, values["-FOLDER-"])
+            previous_trial = values["-trial-"]
+            window['-PreviousTrial-'].update(previous_trial)
             sg.popup("csv file saved for test bench" + values["-TestBench-"][0], "The csv file is save at: " + values["-FOLDER-"])
         else:
             sg.popup("No data has been received", title = "Error Message")
