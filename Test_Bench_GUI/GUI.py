@@ -26,13 +26,18 @@ Arduino_eqip_list = ['Arduino Uno', 'Arduino Nano']
 Arduino_port = [s for s in ports_list if any(ports_list in s for ports_list in Arduino_eqip_list)] # Pick up the ports that are connected to a Arduino device
 if len(Arduino_port) < 1:
     sg.popup("No Arduino device connected", title="Warning")
-    quit()
+    layout_config = [
+        [sg.Text('Port'), sg.Combo(values = ports_list, size = (40,1), key = "-COM_Port-")],
+        [sg.Text('Baud'), sg.Combo(values = [9600], default_value = 9600,size = (20,1), key = "-Baud-")],
+        [sg.Button("OK"), sg.Button("Exit")] 
+        ]
 
-layout_config = [
-    [sg.Text('Port'), sg.Combo(values = ports_list,  default_value = Arduino_port[0],size = (40,1), key = "-COM_Port-")],
-    [sg.Text('Baud'), sg.Combo(values = [9600], default_value = 9600,size = (20,1), key = "-Baud-")],
-    [sg.Button("OK"), sg.Button("Exit")] 
-    ]
+else: 
+    layout_config = [
+        [sg.Text('Port'), sg.Combo(values = ports_list,  default_value = Arduino_port[0],size = (40,1), key = "-COM_Port-")],
+        [sg.Text('Baud'), sg.Combo(values = [9600], default_value = 9600,size = (20,1), key = "-Baud-")],
+        [sg.Button("OK"), sg.Button("Exit")] 
+        ]
 
 window_config = sg.Window(title = "Configure the serial monitor", layout = layout_config, size=(400, 200), font = font, finalize=True)
 event, values = window_config.read(close=True)
@@ -116,9 +121,25 @@ layout_1 = [
     [sg.Text('KOH Concentration', size =(15, 1)), sg.InputText(key = "-KOHConc-", do_not_clear=True, size=(20,1))],
     [sg.Text('Trial', size =(15, 1)), sg.InputText(key = "-trial-", do_not_clear=True, size=(15,1)), sg.Text('Previous trial: '), sg.Text(previous_trial, key = '-PreviousTrial-')],
     [sg.Text('Arduino Command'), sg.Combo(values=["s", "t"], default_value = "s", size = (15,1), key = "-Arduino_Comand-")],
-    [sg.Button("Run"), sg.Button("Save as csv"), sg.Button("See Results"), sg.Button("Pause"), sg.Button("Clear"), sg.Button("Reset")] 
+    [sg.Button("Run"), sg.Button("Save as csv"), sg.Button("See Results"), sg.Button("Pause"), sg.Button("Clear"), sg.Button("Reset")],
+    [sg.Button("Competition Mode", size = (25,1))]
     ]
 
+# Construct the layout of the competition window
+def make_competition_window():
+    layout_competition = [
+        [sg.Text("This window is used for KOH concentration calculation and time estimation")],
+        [sg.Text("Car Speed (m/s): "), sg.InputText(size=(15, 1), enable_events=True, do_not_clear=True, key="-CarSpeed-")],
+        [sg.Text("Distance (m): "), sg.InputText(size=(15, 1), enable_events=True, do_not_clear=True, key="-Dist-"), sg.Button("Calculate time")],
+        [sg.Text("Required Time (s) "), sg.InputText(size=(15, 1), enable_events=True, key="-ReqTime-"), sg.Button("Calculate KOH mass")],
+        [sg.Text("Required KOH (g) "), sg.InputText(size=(15, 1), enable_events=True, do_not_clear=True, key="-ReqKOH-")],
+        [sg.Button("Clear")]
+    ]
+    return sg.Window(title = "Competition Mode", layout=layout_competition, font = font, finalize=True)
+
+def input_test(dependency, output):
+
+    return True
 
 # Construct the layout of the result table window
 result_table = []
@@ -170,6 +191,8 @@ while True:
             window_result = None
         elif window == window1:         # if closing win 1, exit program
             break
+        elif window == window_competition: # if closing window_competition, mark as closed
+            window_competition = None
     
     elif event == "Date":
         date = sg.popup_get_date()
@@ -186,6 +209,24 @@ while True:
         for cid in headings_table:
             table_widget.column(cid, stretch=True)          # Set column stretchable when window resiz
 
+    # Pop up Competition Mode window
+    elif event == "Competition Mode":
+        window_competition = make_competition_window()
+
+    elif window == window_competition:
+        if event == "Calculate time":
+            Req_time = float(values["-Dist-"]) / float(values["CarSpeed"])
+            Req_time = round(Req_time, 4)
+            window_competition["-ReqTime-"].update(Req_time)
+        elif event == "Calculate KOH mass":
+            KOH_mass = np.log((float(values["-ReqTime-"])-40)/396.3304)/-0.1415
+            KOH_mass = round(KOH_mass, 4)
+            window_competition["-ReqKOH-"].update(KOH_mass)
+        elif event == "Clear":
+            window_competition["-ReqTime-"].update(" ")
+            window_competition["-ReqKOH-"].update(" ")
+
+
     # Save the data as a csv file using the designated path
     elif event == "Save as csv":
         if 'df_cb' in globals():
@@ -200,7 +241,13 @@ while True:
     # Send command to Arduino and show realtime sensor readings in a plot    
     elif event == "Run":
         if window_result == None: 
-            sg.popup("Please open result table by clicking the [See Results] button", title = "Warning")
+            window_result = make_result_window(headings_table)
+            table = window_result['-ResultTable-']
+            table_widget = table.Widget
+            table.expand(expand_x=True, expand_y=True)          # Expand table in both directions of 'x' and 'y'
+            for cid in headings_table:
+                table_widget.column(cid, stretch=True)          # Set column stretchable when window resiz
+
         elif values["-Arduino_Comand-"][0] == "s":
             Arduino_Run(values["-Arduino_Comand-"][0])
             measured_time = 0   # initialized the reaction time
