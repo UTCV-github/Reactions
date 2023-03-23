@@ -4,7 +4,6 @@ The coce is written by: Fred Feng
 '''
 
 import PySimpleGUI as sg
-import os.path
 import serial
 import serial.tools.list_ports
 import time
@@ -62,7 +61,7 @@ def Arduino_Run(command):
     ser.write(str.encode(command))
 
 # Define the function that saves the data as csv file(s)
-def save_csv(Date, Test_bench, KOH, Trial, Data_list, save_path):
+def save_csv(Date, Test_bench, KOH, Trial, DataFrame, save_path):
     # Date = datetime.strptime(Date, '%Y-%m-%d %H:%M:%S')
     # Date = datetime.strftime(Date, '%Y-%m-%d-%H%M%S')
     current_time = datetime.now()
@@ -71,7 +70,7 @@ def save_csv(Date, Test_bench, KOH, Trial, Data_list, save_path):
     Date = datetime.strftime(Date, '%Y%m%d')
     file_name = save_path + "/" + Date + "_" + current_time + "_" + Test_bench + "_" + KOH + "_" + Trial + ".csv"
 
-    Data_list.to_csv(file_name, index = False)
+    DataFrame.to_csv(file_name, index = False)
 
 # Define the function that reads a line of Arduino output and return the readings of each parameter
 def read_output(output):
@@ -115,14 +114,14 @@ previous_trial = 'NA'
 layout_1 = [
     [sg.Text("This is a UTCV Reactions GUI demo")], 
     [sg.Text("File save path"), sg.InputText(size=(25, 1), enable_events=True, key="-FOLDER-"), sg.FolderBrowse()],
-    [sg.Text('Test Bench (A/B/C)', size =(15, 1)), sg.Combo(values=["A", "B", "C"], default_value = "A", size=(15,1))],
+    [sg.Text('Test Bench (A/B/C)', size =(15, 1)), sg.Combo(values=["A", "B", "C"],key = "-TestBench-", default_value = "A", size=(15,1))],
     # [sg.Text("Date"), sg.Input(key = "-Date-", size=(20,1)), sg.CalendarButton("Date", close_when_date_chosen=True, target="-Date-")], # Not working if sg.read_all_windows() is used
     [sg.Text("Date"), sg.Input(key = "-Date-", size=(20,1)), sg.Button('Date')],
     [sg.Text('KOH Concentration', size =(15, 1)), sg.InputText(key = "-KOHConc-", do_not_clear=True, size=(20,1))],
     [sg.Text('Trial', size =(15, 1)), sg.InputText(key = "-trial-", do_not_clear=True, size=(15,1)), sg.Text('Previous trial: '), sg.Text(previous_trial, key = '-PreviousTrial-')],
     [sg.Text('Arduino Command'), sg.Combo(values=["s", "t"], default_value = "s", size = (15,1), key = "-Arduino_Comand-")],
     [sg.Button("Run"), sg.Button("Save as csv"), sg.Button("See Results"), sg.Button("Pause"), sg.Button("Clear"), sg.Button("Reset")],
-    [sg.Button("Competition Mode", size = (25,1))]
+    [sg.Button("KOH Calculator", size = (25,1))]
     ]
 
 # Construct the layout of the competition window
@@ -132,18 +131,14 @@ def make_competition_window():
         [sg.Text("Car Speed (m/s): "), sg.InputText(size=(15, 1), enable_events=True, do_not_clear=True, key="-CarSpeed-")],
         [sg.Text("Distance (m): "), sg.InputText(size=(15, 1), enable_events=True, do_not_clear=True, key="-Dist-"), sg.Button("Calculate time")],
         [sg.Text("Required Time (s) "), sg.InputText(size=(15, 1), enable_events=True, key="-ReqTime-"), sg.Button("Calculate KOH mass")],
-        [sg.Text("Required KOH (g) "), sg.InputText(size=(15, 1), enable_events=True, do_not_clear=True, key="-ReqKOH-")],
+        [sg.Text("Required KOH (g) "), sg.InputText(size=(15, 1), enable_events=True, do_not_clear=True, key="-ReqKOH-"), sg.Button("Calculate reaction time")],
         [sg.Button("Clear")]
     ]
-    return sg.Window(title = "Competition Mode", layout=layout_competition, font = font, finalize=True)
-
-def input_test(dependency, output):
-
-    return True
+    return sg.Window(title = "KOH Calculator", layout=layout_competition, font = font, finalize=True)
 
 # Construct the layout of the result table window
 result_table = []
-headings_table = ['R', 'G', 'B', 'C', 'time', 'measured_time']
+headings_table = ['R', 'G', 'B', 'C','cur_avg', 'time']
 def make_result_window(headings_table): 
     layout_table = [
         [sg.Text('Reaction time: ', font = font), sg.Text('NA', font = font_2, key = '-ReactionTime-')],  # Add stop watch
@@ -172,6 +167,9 @@ fig, ax = plt.subplots()
 plt.xlabel("Time (s)")
 plt.ylabel("C value")
 bg = fig.canvas.copy_from_bbox(fig.bbox)
+
+# Create cache logging file
+
 
 # Create an event loop
 while True:
@@ -207,24 +205,40 @@ while True:
         table_widget = table.Widget
         table.expand(expand_x=True, expand_y=True)          # Expand table in both directions of 'x' and 'y'
         for cid in headings_table:
-            table_widget.column(cid, stretch=True)          # Set column stretchable when window resiz
+            table_widget.column(cid, stretch=True)          # Set column stretchable when window resize
 
     # Pop up Competition Mode window
-    elif event == "Competition Mode":
+    elif event == "KOH Calculator":
         window_competition = make_competition_window()
 
     elif window == window_competition:
         if event == "Calculate time":
-            Req_time = float(values["-Dist-"]) / float(values["CarSpeed"])
-            Req_time = round(Req_time, 4)
-            window_competition["-ReqTime-"].update(Req_time)
+            try:
+                Req_time = float(values["-Dist-"]) / float(values["CarSpeed"])
+                Req_time = round(Req_time, 4)
+                window_competition["-ReqTime-"].update(Req_time)
+            except ValueError:
+                sg.popup("Please fill the Distance and Car Speed box with numbers", title = "WARNING")
+            
         elif event == "Calculate KOH mass":
-            KOH_mass = np.log((float(values["-ReqTime-"])-40)/396.3304)/-0.1415
-            KOH_mass = round(KOH_mass, 4)
-            window_competition["-ReqKOH-"].update(KOH_mass)
+            try: 
+                KOH_mass = np.log((float(values["-ReqTime-"])-40)/396.3304)/-0.1415
+                KOH_mass = round(KOH_mass, 4)
+                window_competition["-ReqKOH-"].update(KOH_mass)
+            except ValueError:
+                sg.popup("Please make sure the required time box is filled with number", title = "WARNING")
+        
+        elif event == "Calculate reaction time":
+            try: 
+                Req_time_calc = 396.3304 * np.exp(-0.1415 * float(values["-ReqKOH-"])) + 40
+                Req_time_calc = round(Req_time_calc, 4)
+                window_competition["-ReqTime-"].update(Req_time_calc)
+            except ValueError:
+                sg.popup("Please make sure the required KOH mass box is filled with number", title = "WARNING")
+
         elif event == "Clear":
-            window_competition["-ReqTime-"].update(" ")
-            window_competition["-ReqKOH-"].update(" ")
+            window_competition["-ReqTime-"].update("")
+            window_competition["-ReqKOH-"].update("")
 
 
     # Save the data as a csv file using the designated path
@@ -268,11 +282,12 @@ while True:
                     # plt.show()
                     # plt.pause(0.001)
                     dot, = ax.plot(float(result.time), int(result.C),'.', color = 'lightblue', markersize = 5)
+                    dot, = ax.plot(float(result.time), int(result.cur_avg),'.', color = 'lightgreen', markersize = 5)
                     ax.draw_artist(dot)
                     fig.canvas.blit(fig.bbox) 
 
                     if result_table != None: 
-                        result_table_row = [result.iloc[0]['R'], result.iloc[0]['G'], result.iloc[0]['B'], result.iloc[0]['C'], result.iloc[0]['time'], result.iloc[0]['measured_time']]
+                        result_table_row = [result.iloc[0]['R'], result.iloc[0]['G'], result.iloc[0]['B'], result.iloc[0]['C'], result.iloc[0]['cur_avg'], result.iloc[0]['time']]
                         result_table.append(result_table_row)
                         window_result['-ResultTable-'].update(result_table)
                         window_result['-ReactionTime-'].update(result.iloc[0]['time'])
@@ -318,6 +333,7 @@ while True:
     
     elif event == "Reset":
         window_result['-ReactionTime-'].update('NA') # Clear Reaction timer
+        window_result['-StopTime-'].update('NA') # Clear Reaction stop timer
         ax.cla()  # Clear the plot
         Arduino_Run("t")
         time.sleep(0.1)
