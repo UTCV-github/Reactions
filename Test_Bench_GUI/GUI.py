@@ -160,6 +160,7 @@ def make_result_window(headings_table):
 # Create the window
 window1 = sg.Window(title = "Reactions Test Bench GUI Demo", layout = layout_1, size=(600, 400), font = font, finalize=True)
 window_result = None
+window_competition = None
 
 # Open Pyplot interactive tool
 plt.ion()
@@ -262,7 +263,7 @@ while True:
             for cid in headings_table:
                 table_widget.column(cid, stretch=True)          # Set column stretchable when window resiz
 
-        elif values["-Arduino_Comand-"][0] == "s":
+        if values["-Arduino_Comand-"][0] == "s":
             Arduino_Run(values["-Arduino_Comand-"][0])
             measured_time = 0   # initialized the reaction time
             df_cb = []          # create a list to temporarily hold all dataframes 
@@ -282,7 +283,7 @@ while True:
                     # plt.show()
                     # plt.pause(0.001)
                     dot, = ax.plot(float(result.time), int(result.C),'.', color = 'lightblue', markersize = 5)
-                    dot, = ax.plot(float(result.time), int(result.cur_avg),'.', color = 'lightgreen', markersize = 5)
+                    # dot, = ax.plot(float(result.time), int(result.cur_avg),'.', color = 'lightgreen', markersize = 5)
                     ax.draw_artist(dot)
                     fig.canvas.blit(fig.bbox) 
 
