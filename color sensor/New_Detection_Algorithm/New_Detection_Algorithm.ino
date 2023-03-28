@@ -173,7 +173,7 @@ if(Started){
       larger_diff = averages[read_idx] - averages[read_idx - 4];
     }
     if(initValue){
-      if(timeDiff > 10000){
+      if(timeDiff > 20000){
         initValue=0;
         }
     }else{
