@@ -12,6 +12,7 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import os
 
 font = ("Arial", 16)
 font_2 = ("Arial", 20)
@@ -72,12 +73,19 @@ def save_csv(Date, Test_bench, KOH, Trial, DataFrame, save_path):
 
     DataFrame.to_csv(file_name, index = False)
 
+def cache_save(df):
+    now = datetime.now()
+    date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
+    file_name =  os.path.dirname(__file__) + "/Cache/Cache_" + date_time + ".csv"
+    df.to_csv(file_name, index = False)
+
+
 # Define the function that reads a line of Arduino output and return the readings of each parameter
 def read_output(output):
     # Example output: b"R:365;G:117;B:76;C:590;cur_avg590;prev_avg590;read_idx8;Time:3.0889999866;Measured_Time:0.0000000000 \r\n"
     output = output.decode("utf-8")
     output = output[0:-5] # remove " \n\r" at the end of the string
-    result = output.split(',')
+    result = output.split(', ')
     if len(result) > 3:
         # R = int(result[0][2:])
         # G = int(result[1][2:])
@@ -93,19 +101,21 @@ def read_output(output):
         G = result[1][2:]
         B = result[2][2:]
         C = result[3][2:]
-        cur_avg = result[4][7:]
-        prev_avg = result[5][8:]
-        read_idx = result[6][8:]
+        cur_avg = result[4][8:]
+        prev_avg = result[5][9:]
+        read_idx = result[6][9:]
         time = result[7][5:]
         Measured_time = result[8][14:]
+        average_10 = result[9][10:]
+
 
         # Compile the results into a dataframe
-        d = {'R': [R], 'G': [G], 'B': [B], 'C': [C], 'cur_avg': [cur_avg], 'prev_avg': [prev_avg], 'read_idx': [read_idx], 'time': [time], 'measured_time': [Measured_time]}
+        d = {'R': [R], 'G': [G], 'B': [B], 'C': [C], 'cur_avg': [cur_avg], 'prev_avg': [prev_avg], 'read_idx': [read_idx], 'time': [time], 'measured_time': [Measured_time], 'average_10': [average_10]}
         df = pd.DataFrame(data=d)
         return df
     # return the reaction time if the output is "measured time"
     elif len(result) < 3:
-        result = output.split()
+        result = output.split(': ')
         measured_time = result[1]
         return float(measured_time)
 
@@ -138,7 +148,7 @@ def make_competition_window():
 
 # Construct the layout of the result table window
 result_table = []
-headings_table = ['R', 'G', 'B', 'C','cur_avg', 'time']
+headings_table = ['R', 'G', 'B', 'C','cur_avg', 'time', 'average_10']
 def make_result_window(headings_table): 
     layout_table = [
         [sg.Text('Reaction time: ', font = font), sg.Text('NA', font = font_2, key = '-ReactionTime-')],  # Add stop watch
@@ -167,6 +177,7 @@ plt.ion()
 fig, ax = plt.subplots()
 plt.xlabel("Time (s)")
 plt.ylabel("C value")
+plt.ylim(0,2500)
 bg = fig.canvas.copy_from_bbox(fig.bbox)
 
 # Create cache logging file
@@ -266,7 +277,7 @@ while True:
         if values["-Arduino_Comand-"][0] == "s":
             Arduino_Run(values["-Arduino_Comand-"][0])
             measured_time = 0   # initialized the reaction time
-            df_cb = []          # create a list to temporarily hold all dataframes 
+            ls_df_cb = []          # create a list to temporarily hold all dataframes 
             result_table = []   # Initialize the result table again
             plt.xlabel("Time (s)")
             plt.ylabel("C value")
@@ -278,7 +289,7 @@ while True:
                 if type(result) == float:
                     measured_time = result
                 elif type(result) == pd.DataFrame:
-                    df_cb.append(result)
+                    ls_df_cb.append(result)
                     # plt.scatter(float(result.time), int(result.C), color = 'lightblue')
                     # plt.show()
                     # plt.pause(0.001)
@@ -288,7 +299,7 @@ while True:
                     fig.canvas.blit(fig.bbox) 
 
                     if result_table != None: 
-                        result_table_row = [result.iloc[0]['R'], result.iloc[0]['G'], result.iloc[0]['B'], result.iloc[0]['C'], result.iloc[0]['cur_avg'], result.iloc[0]['time']]
+                        result_table_row = [result.iloc[0]['R'], result.iloc[0]['G'], result.iloc[0]['B'], result.iloc[0]['C'], result.iloc[0]['cur_avg'], result.iloc[0]['time'], result.iloc[0]['average_10']]
                         result_table.append(result_table_row)
                         window_result['-ResultTable-'].update(result_table)
                         window_result['-ReactionTime-'].update(result.iloc[0]['time'])
@@ -313,8 +324,8 @@ while True:
                 if event == "Pause":
                     Arduino_Run("t")
                     break
-            if len(df_cb) != 0: 
-                df_cb = pd.concat(df_cb, axis=0, ignore_index=True) # df_cb is the dataframe that stores all data points
+            if len(ls_df_cb) != 0: 
+                df_cb = pd.concat(ls_df_cb, axis=0, ignore_index=True) # df_cb is the dataframe that stores all data points
         else:
             Arduino_Run(values["-Arduino_Comand-"][0])
     
@@ -322,9 +333,14 @@ while True:
         Arduino_Run("t")
 
     elif event == "Clear":
+        if 'ls_df_cb' in globals() and len(ls_df_cb) != 0:
+            df_cb = pd.concat(ls_df_cb, axis=0, ignore_index=True)
+            cache_save(df_cb)
+            print("Cache successfully saved")
+        
         Arduino_Run("t")
         ser.reset_output_buffer()
-        df_cb = [] # create a list to temporarily hold all dataframes 
+        ls_df_cb = [] # create a list to temporarily hold all dataframes 
         result_table = [] # Initialize the result table again
         if result_table != None: 
             window_result['-ResultTable-'].update(result_table)
