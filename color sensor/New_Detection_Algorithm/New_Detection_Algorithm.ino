@@ -102,7 +102,7 @@ if(Serial.available()){
         digitalWrite(car_motor_rev, LOW);
         //digitalWrite(stirrer_fwd, HIGH);
         //digitalWrite(stirrer_rev, LOW);
-        digitalWrite(stirrer_speed, 80);
+        analogWrite(stirrer_speed, 80);
         Started = 1;
         initValue = 1;
     }
@@ -242,6 +242,7 @@ if(Started){
     Serial.print("First Diff:"); Serial.print(first_diff, DEC); Serial.print(", ");
     Serial.print("Larger Diff:"); Serial.print(larger_diff, DEC); Serial.print(", ");
     Serial.print("Overallavg:"); Serial.print(overallAvg, DEC); Serial.print(", ");
+    Serial.print("Delta0:"); Serial.print((cur_avg - overallAvg), DEC); Serial.print(", ");
     if (first_diff > threshold) {
       Serial.print("Delta reached and stopped");
     } else {
