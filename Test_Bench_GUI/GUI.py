@@ -16,6 +16,7 @@ import os
 
 font = ("Arial", 16)
 font_2 = ("Arial", 20)
+Test_mode = False
 
 # Configure the serial port that connects the Arduino
 ports = serial.tools.list_ports.comports() # Get a COM port list
@@ -26,6 +27,7 @@ Arduino_eqip_list = ['Arduino Uno', 'Arduino Nano']
 Arduino_port = [s for s in ports_list if any(ports_list in s for ports_list in Arduino_eqip_list)] # Pick up the ports that are connected to a Arduino device
 if len(Arduino_port) < 1:
     sg.popup("No Arduino device connected", title="Warning")
+    Test_mode = True
     layout_config = [
         [sg.Text('Port'), sg.Combo(values = ports_list, size = (40,1), key = "-COM_Port-")],
         [sg.Text('Baud'), sg.Combo(values = [9600], default_value = 9600,size = (20,1), key = "-Baud-")],
@@ -45,17 +47,21 @@ event, values = window_config.read(close=True)
 if event == "Exit":
     quit()
 
-COM_port = values["-COM_Port-"]
-Baud = values["-Baud-"]
-ser = serial.Serial(COM_port, Baud, timeout=1)
-time.sleep(1) # Pause for 1 sencond to wait for response from the Arduino
+if Test_mode:
+    sg.popup("Will enter test mode")
 
-# Detect if the sensor is connected properly
-msg = ser.readline()
-if msg.decode('utf-8').rstrip() == 'Found sensor':
-    sg.popup("Sensor is working properly")
 else:
-    sg.popup("Sensor not detected, please check your connection")
+    COM_port = values["-COM_Port-"]
+    Baud = values["-Baud-"]
+    ser = serial.Serial(COM_port, Baud, timeout=1)
+    time.sleep(1) # Pause for 1 sencond to wait for response from the Arduino
+
+    # Detect if the sensor is connected properly
+    msg = ser.readline()
+    if msg.decode('utf-8').rstrip() == 'Found sensor':
+        sg.popup("Sensor is working properly")
+    else:
+        sg.popup("Sensor not detected, please check your connection")
 
 # Define the function that send command to the Arduino
 def Arduino_Run(command):
