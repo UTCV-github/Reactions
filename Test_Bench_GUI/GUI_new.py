@@ -15,6 +15,8 @@ import customtkinter
 from CTkMessagebox import CTkMessagebox
 from customtkinter import filedialog
 from PIL import Image
+from CTkTable import *
+import time
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -29,6 +31,8 @@ class MB_frame_right(customtkinter.CTkFrame):
         self.switch_g.grid(row=1, column=0, padx=10, pady=(10, 0), sticky="w")
         self.switch_b = customtkinter.CTkSwitch(self, text="B value")
         self.switch_b.grid(row=2, column=0, padx=10, pady=(10, 0), sticky="w")
+        self.switch_c = customtkinter.CTkSwitch(self, text="C value")
+        self.switch_c.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="w")
 
         self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.show_warning, hover = True)
         self.button_save.grid(row=8, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
@@ -41,6 +45,8 @@ class MB_frame_right(customtkinter.CTkFrame):
             ls_sensor_readings.append(self.switch_g.cget("text"))
         if self.switch_b.get() == 1:
             ls_sensor_readings.append(self.switch_b.cget("text"))
+        if self.switch_c.get() == 1:
+            ls_sensor_readings.append(self.switch_c.cget("text"))
         return ls_sensor_readings
     
     def show_warning(self):
@@ -55,40 +61,43 @@ class MB_window(customtkinter.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
+        self.button_file = customtkinter.CTkButton(self, text="Arduino Configuration", command=Configure_Arduino)
+        self.button_file.grid(row=0, column=0, padx=10, pady=(10,0), sticky="ew")
+
         self.button_file = customtkinter.CTkButton(self, text="select file", command=self.selectfile)
-        self.button_file.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+        self.button_file.grid(row=1, column=0, padx=10, pady=(10,0), sticky="ew")
 
         self.entry_file = customtkinter.CTkEntry(self, placeholder_text="Save data file at ...")
-        self.entry_file.grid(row=0, column=1, columnspan=2, padx=(20, 0), pady=(20, 20), sticky="nsew")
+        self.entry_file.grid(row=2, column=1, columnspan=2, padx=(10, 0), pady=(20, 20), sticky="nsew")
 
         self.label_TestBench = customtkinter.CTkLabel(self, text="Select a test bench", anchor="w")
-        self.label_TestBench.grid(row=1, column=0, padx=10, pady=(10, 0), sticky="nsew")
+        self.label_TestBench.grid(row=2, column=0, padx=10, pady=(10, 0), sticky="nsew")
 
         self.optionmenu_TestBench = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
                                                         values=["A: test bench", "B: car", "C"])
-        self.optionmenu_TestBench.grid(row=2, column=0, padx=10, pady=(0, 10))
+        self.optionmenu_TestBench.grid(row=3, column=0, padx=10, pady=(0, 10))
 
         self.label_KohConc = customtkinter.CTkLabel(self, text="Input the KOH concentration", anchor="w")
-        self.label_KohConc.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="nsew")
+        self.label_KohConc.grid(row=4, column=0, padx=10, pady=(10, 0), sticky="nsew")
 
         self.optionmenu_KohConc = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
                                                         values=["g/100mL", "g/25mL", "M", "wt%"])
-        self.optionmenu_KohConc.grid(row=4, column=0, padx=10, pady=(0, 10))
+        self.optionmenu_KohConc.grid(row=5, column=0, padx=10, pady=(0, 10))
 
         self.entry_KohConc = customtkinter.CTkEntry(self, placeholder_text="KOH concentration")
-        self.entry_KohConc.grid(row=4, column=1, columnspan=2, padx=(20, 0), pady=(0, 10), sticky="nsew")
+        self.entry_KohConc.grid(row=5, column=1, columnspan=2, padx=(20, 0), pady=(0, 10), sticky="nsew")
 
         self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.show_warning, hover = True)
-        self.button_run.grid(row=5, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        self.button_run.grid(row=6, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
-        self.button_clear = customtkinter.CTkButton(self, text="CLEAR", command=self.show_warning, hover = True)
-        self.button_clear.grid(row=6, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        self.button_showresult = customtkinter.CTkButton(self, text="SHOW RESULT", command=result_window.make_result_window, hover = True)
+        self.button_showresult.grid(row=7, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=self.show_warning, hover = True)
-        self.button_pause.grid(row=7, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        self.button_pause.grid(row=8, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.button_reset = customtkinter.CTkButton(self, text="RESET", command=self.show_warning, hover = True)
-        self.button_reset.grid(row=8, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        self.button_reset.grid(row=9, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
     def show_warning(self):
     # Show some retry/cancel warnings
@@ -101,6 +110,90 @@ class MB_window(customtkinter.CTkFrame):
     def selectfile(self):
         filename = filedialog.askopenfilename()
         print(filename)
+
+class result_window(customtkinter.CTkToplevel):
+    def __init__(self):
+        super().__init__()
+
+        self.title("Results")
+        self.geometry("400x200")
+        image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Logo")
+        self.iconbitmap(os.path.join(image_path, "result_table.ico"))
+        self.draw_table()
+        self.focus()
+
+    def draw_table(self, value):
+        value = [[1,2,3,4,5],
+                [1,2,3,4,5],
+                [1,2,3,4,5],
+                [1,2,3,4,5],
+                [1,2,3,4,5]]
+
+        table = CTkTable(self, row=5, column=5, values=value)
+        table.pack(expand=True, fill="both", padx=20, pady=20)
+
+    def make_result_window(): 
+        headings_table = ['R', 'G', 'B', 'C','cur_avg', 'time', 'average_10']
+        result_table = []
+        layout_table = [
+            [sg.Text('Reaction time: '), sg.Text('NA', key = '-ReactionTime-')],  # Add stop watch
+            [sg.Text('Stop time: '), sg.Text('NA', key = '-StopTime-')], # Indicate total reaction time once the reaction stops
+            [sg.Table( values = result_table,
+                        headings = headings_table,
+                        max_col_width=40,
+                        auto_size_columns=False,
+                        def_col_width=10,
+                        display_row_numbers=True,
+                        justification='middle',
+                        num_rows=20,
+                        key = '-ResultTable-',
+                        row_height=30
+            )]
+        ]
+
+        return sg.Window(title = "Sensor Reading", layout=layout_table, size=(800, 600), finalize=True, resizable=True, background_color='white')
+
+class Testing_window(customtkinter.CTkFrame):
+    def __init__(self, master):
+        super().__init__(master)
+
+        self.sensor_reading_display = customtkinter.CTkTextbox(self, width=500, height=300, corner_radius=5)
+        self.sensor_reading_display.grid(row=0, column=0, columnspan=2, padx=10, pady=(10, 0), sticky="nsew")
+
+        self.command_input = customtkinter.CTkEntry(self)
+        self.command_input.grid(row=1, column=0, padx=10, pady=(10, 0), sticky="nsew")
+
+        self.command_send = customtkinter.CTkButton(self, text="SEND")
+        self.command_send.grid(row=1, column=1, padx=10, pady=(10, 0), sticky="nsew")
+
+class Configure_Arduino(customtkinter.CTkToplevel):
+    def __init__(self):
+        super().__init__()
+
+        self.title("Arduino Configuration")
+        self.geometry("400x400")
+        self.after(10, self.lift) # Add this to keep the new window float atop
+
+        self.Cfg_Arduino_COM_label = customtkinter.CTkLabel(self, text="Choose a COM port", anchor="w")
+        self.Cfg_Arduino_COM_label.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
+
+        self.Cfg_Arduino_COM_label = customtkinter.CTkLabel(self, text="Choose a COM port", anchor="w")
+        self.Cfg_Arduino_COM_label.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
+
+
+class Setting_window(customtkinter.CTkFrame):
+    def __init__(self, master):
+        super().__init__(master)
+
+        self.label_KohConc = customtkinter.CTkLabel(self, text="Choose a colour theme", anchor="w")
+        self.label_KohConc.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
+
+        self.appearance_mode_menu = customtkinter.CTkOptionMenu(self, values=["Light", "Dark", "System"],
+                                                                command=self.change_appearance_mode_event)
+        self.appearance_mode_menu.grid(row=1, column=0, padx=20, pady=(0, 10), sticky="s")
+
+    def change_appearance_mode_event(self, new_appearance_mode):
+        customtkinter.set_appearance_mode(new_appearance_mode)
 
 class App(customtkinter.CTk):
     def __init__(self):
@@ -122,11 +215,14 @@ class App(customtkinter.CTk):
         self.navigation_frame.grid(row=0, column=0, sticky="nsew")
         self.navigation_frame.grid_rowconfigure(5, weight=1)
 
-        self.logo_image = customtkinter.CTkImage(Image.open(os.path.join(image_path, "logo__UTCV_banner(black)[20210912].png")), size=(152, 36))
+        self.logo_image = customtkinter.CTkImage(light_image=Image.open(os.path.join(image_path, "logo__UTCV_banner(black)[20210912].png")),
+                                                 dark_image=Image.open(os.path.join(image_path, "logo__UTCV_banner(white)[20210912].png")), size=(152, 36))
         self.MB_logo = customtkinter.CTkImage(Image.open(os.path.join(image_path, "MB icon.png")), size=(26, 26))
         self.Chameleon_logo = customtkinter.CTkImage(Image.open(os.path.join(image_path, "Chameleon logo.png")), size=(26, 26))
-        self.testing_logo = customtkinter.CTkImage(Image.open(os.path.join(image_path, "Testing logo.png")), size=(26, 26))
+        self.testing_logo = customtkinter.CTkImage(light_image=Image.open(os.path.join(image_path, "Testing logo.png")),
+                                                   dark_image=Image.open(os.path.join(image_path, "Testing logo (white).png")), size=(26, 26))
         self.setting_logo = customtkinter.CTkImage(Image.open(os.path.join(image_path, "Setting logo.png")), size=(26, 26))
+        self.ResultTable_logo = customtkinter.CTkImage(Image.open(os.path.join(image_path, "result_table.ico")), size=(26, 26))
 
         self.navigation_frame_label = customtkinter.CTkLabel(self.navigation_frame, text=None, image=self.logo_image,
                                                              compound="left", font=customtkinter.CTkFont(size=15, weight="bold"))
@@ -163,27 +259,31 @@ class App(customtkinter.CTk):
         self.window = MB_window(self.MB_frame)
         self.window.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsw")
 
-        # self.button = customtkinter.CTkButton(self.MB_frame, text="RUN", command=self.show_warning)
-        # self.button.grid(row=3, column=3, padx=10, pady=10, sticky="ew")
-
-        # self.button2 = customtkinter.CTkButton(self.MB_frame, text="select file", command=self.selectfile)
-        # self.button2.grid(row=4, column=3, padx=10, pady=10, sticky="ew")
-
         # create Chameleon frame
         self.Chameleon_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
 
         # create testing frame
         self.testing_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.testing_frame.grid_columnconfigure(0, weight=1)
+
+        self.testing = Testing_window(self.testing_frame)
+        self.testing.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsw")
 
         # create setting frame
         self.setting_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
 
+        self.setting = Setting_window(self.setting_frame)
+        self.setting.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsw")
+
+        # select default frame
+        self.select_frame_by_name("MB")
+
     def select_frame_by_name(self, name):
         # set button color for selected button
-        self.frame_1_button.configure(fg_color=("gray75", "gray25") if name == "home" else "transparent")
-        self.frame_2_button.configure(fg_color=("gray75", "gray25") if name == "frame_2" else "transparent")
-        self.frame_3_button.configure(fg_color=("gray75", "gray25") if name == "frame_3" else "transparent")
-        self.frame_setting_button.configure(fg_color=("gray75", "gray25") if name == "frame_3" else "transparent")
+        self.frame_1_button.configure(fg_color=("gray75", "gray25") if name == "MB" else "transparent")
+        self.frame_2_button.configure(fg_color=("gray75", "gray25") if name == "Chameleon" else "transparent")
+        self.frame_3_button.configure(fg_color=("gray75", "gray25") if name == "testing" else "transparent")
+        self.frame_setting_button.configure(fg_color=("gray75", "gray25") if name == "setting" else "transparent")
 
         # show selected frame
         if name == "MB":
