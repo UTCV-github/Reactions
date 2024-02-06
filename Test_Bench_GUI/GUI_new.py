@@ -34,7 +34,7 @@ status.Arduino_connection = False
 status.ser = None
 status.TestMode = False
 
-class MB_frame_right(customtkinter.CTkFrame):
+class RGBC_switch(customtkinter.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
@@ -129,6 +129,8 @@ class Chameleon_window(customtkinter.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
+        self.new_window = None
+
         self.button_Arduino_config = customtkinter.CTkButton(self, text="Arduino Configuration", command=Configure_Arduino)
         self.button_Arduino_config.grid(row=0, column=0, padx=10, pady=(10,0), sticky="ew")
 
@@ -158,10 +160,10 @@ class Chameleon_window(customtkinter.CTkFrame):
         self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.RunReaction, hover = True)
         self.button_run.grid(row=6, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
-        self.button_showresult = customtkinter.CTkButton(self, text="SHOW RESULT", command=self.outputWindow, hover = True)
-        self.button_showresult.grid(row=7, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        # self.button_showresult = customtkinter.CTkButton(self, text="SHOW RESULT", command=self.outputWindow, hover = True)
+        # self.button_showresult.grid(row=7, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
-        self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=None, hover = True)
+        self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=self.StopReaction, hover = True)
         self.button_pause.grid(row=8, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.button_reset = customtkinter.CTkButton(self, text="RESET", command=None, hover = True)
@@ -169,10 +171,18 @@ class Chameleon_window(customtkinter.CTkFrame):
 
     def RunReaction(self):
         Arduino.execute('s')
+        self.outputWindow()
+
+    def StopReaction(self):
+        Arduino.execute('t')
+        try:
+            self.new_window.auto_log_off()
+        except self.new_window == None:
+            pass
 
     def outputWindow(self):
-        new_window = OutputProcess()
-        new_window.auto_log_on()
+        self.new_window = OutputProcess()
+        self.new_window.auto_log_on()
 
     def selectfile(self):
         filename = filedialog.askopenfilename()
@@ -341,7 +351,7 @@ class App(customtkinter.CTk):
         self.MB_frame.grid_columnconfigure(0, weight=1)
 
         # Create check box
-        self.switch_frame = MB_frame_right(self.MB_frame)
+        self.switch_frame = RGBC_switch(self.MB_frame)
         self.switch_frame.grid(row=0, column=3, padx=10, pady=(10, 0), sticky="nsw")
 
         self.window = MB_window(self.MB_frame)
@@ -352,6 +362,9 @@ class App(customtkinter.CTk):
 
         self.Chameleon = Chameleon_window(self.Chameleon_frame)
         self.Chameleon.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsw")
+
+        self.switch_frame_2 = RGBC_switch(self.Chameleon_frame)
+        self.switch_frame_2.grid(row=0, column=3, padx=10, pady=(10, 0), sticky="nsw")
 
         # create testing frame
         self.testing_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -367,7 +380,7 @@ class App(customtkinter.CTk):
         self.setting.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsw")
 
         # select default frame
-        self.select_frame_by_name("MB")
+        self.select_frame_by_name("Chameleon")
 
     def select_frame_by_name(self, name):
         # set button color for selected button

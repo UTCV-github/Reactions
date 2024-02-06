@@ -31,5 +31,22 @@ class Arduino():
         desired_keys = ['R', 'G', 'B', 'C']
         filtered_dict = {key: [float(value)] for key, value in output_dict.items() if key in desired_keys}
         df = pd.DataFrame(filtered_dict)
+        # if output_type == "df": 
+        #     return df
+        
+        # elif output_type == "dict":
+        #     return filtered_dict
+        
+        # else:
+            # return df 
+        return filtered_dict
+    
+    def read_output_raw():
+        ser = status.ser
+        output_line = ser.readline()
+        output_line = output_line.decode("utf-8")
+        output_line = output_line[0:-5] # remove " \n\r" at the end of the string
 
-        return df 
+        return output_line 
+    
+    

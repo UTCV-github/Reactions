@@ -3,6 +3,7 @@ import customtkinter
 from Global_var import status
 from CTkMessagebox import CTkMessagebox
 from Arduino import Arduino
+import matplotlib.pyplot as plt
 
 class OutputProcess():
     def __init__(self) -> None:
@@ -17,6 +18,7 @@ class OutputProcess():
         self.log_window = customtkinter.CTkToplevel()
         self.log_window.title("Arduino readings")
         self.log_window.geometry("550x350")
+        self.log_window.after(10, self.log_window.lift)
         self.result_box = customtkinter.CTkTextbox(self.log_window, width=500, height=300, corner_radius=5)
         self.result_box.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
 
@@ -40,3 +42,11 @@ class OutputProcess():
     def auto_log_off(self):
         # self.auto_log_on()
         self.auto = False    
+
+    def GraphicOutput_Setup(self):
+        plt.ion()
+        self.fig, self.ax = plt.subplots()
+        plt.xlabel("Time (s)")
+        plt.ylabel("C value")
+        plt.ylim(0,2500)
+        self.bg = self.fig.canvas.copy_from_bbox(self.fig.bbox)
