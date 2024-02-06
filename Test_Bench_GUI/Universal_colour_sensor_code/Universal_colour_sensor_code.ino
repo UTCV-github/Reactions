@@ -177,7 +177,8 @@ if(Started){
         initValue=0;
         }
     }else{
-      if((ending <1) & ((larger_diff > largerThreshold) | (cur_avg - overallAvg) > thresholdZero)){
+//      if((ending <1) & ((larger_diff > largerThreshold) | (cur_avg - overallAvg) > thresholdZero)){
+        if((ending >1) & ((larger_diff > largerThreshold) | (cur_avg - overallAvg) > thresholdZero)){
         // Car motor initialization
         Serial.print("Measured Time: ");
         Serial.print(timeDiff/1000, DEC);
@@ -243,11 +244,11 @@ if(Started){
     Serial.print("Larger Diff:"); Serial.print(larger_diff, DEC); Serial.print(", ");
     Serial.print("Overallavg:"); Serial.print(overallAvg, DEC); Serial.print(", ");
     Serial.print("Delta0:"); Serial.print((cur_avg - overallAvg), DEC); Serial.print(", ");
-    if (first_diff > threshold) {
-      Serial.print("Delta reached and stopped");
-    } else {
-      Serial.print("Delta not reached");
-    }
+//    if (first_diff > threshold) {
+//      Serial.print("Delta reached and stopped");
+//    } else {
+//      Serial.print("Delta not reached");
+//    }
     
     Serial.println(" ");
   }

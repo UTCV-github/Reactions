@@ -13,30 +13,46 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import os
+import platform
 
 font = ("Arial", 16)
 font_2 = ("Arial", 20)
 Test_mode = False
 
-# Configure the serial port that connects the Arduino
-ports = serial.tools.list_ports.comports() # Get a COM port list
-ports_list = []
-for port, desc, hwid in sorted(ports): # Get all COM port name
-    ports_list.append("{}: {}".format(port, desc))
-Arduino_eqip_list = ['Arduino Uno', 'Arduino Nano']
-Arduino_port = [s for s in ports_list if any(ports_list in s for ports_list in Arduino_eqip_list)] # Pick up the ports that are connected to a Arduino device
-if len(Arduino_port) < 1:
-    sg.popup("No Arduino device connected", title="Warning")
-    Test_mode = True
-    layout_config = [
-        [sg.Text('Port'), sg.Combo(values = ports_list, size = (40,1), key = "-COM_Port-")],
-        [sg.Text('Baud'), sg.Combo(values = [9600], default_value = 9600,size = (20,1), key = "-Baud-")],
-        [sg.Button("OK"), sg.Button("Exit")] 
-        ]
+# Detect environment
+CurrentOS = platform.system()
 
-else: 
+if CurrentOS == "Windows":
+    # Configure the serial port that connects the Arduino
+    ports = serial.tools.list_ports.comports() # Get a COM port list
+    ports_list = []
+    for port, desc, hwid in sorted(ports): # Get all COM port name
+        ports_list.append("{}: {}".format(port, desc))
+    Arduino_eqip_list = ['Arduino Uno', 'Arduino Nano']
+    Arduino_port = [s for s in ports_list if any(ports_list in s for ports_list in Arduino_eqip_list)] # Pick up the ports that are connected to a Arduino device
+    if len(Arduino_port) < 1:
+        sg.popup("No Arduino device connected", title="Warning")
+        Test_mode = True
+        layout_config = [
+            [sg.Text('Port'), sg.Combo(values = ports_list, size = (40,1), key = "-COM_Port-")],
+            [sg.Text('Baud'), sg.Combo(values = [9600], default_value = 9600,size = (20,1), key = "-Baud-")],
+            [sg.Button("OK"), sg.Button("Exit")] 
+            ]
+
+    else: 
+        layout_config = [
+            [sg.Text('Port'), sg.Combo(values = ports_list,  default_value = Arduino_port[0],size = (40,1), key = "-COM_Port-")],
+            [sg.Text('Baud'), sg.Combo(values = [9600], default_value = 9600,size = (20,1), key = "-Baud-")],
+            [sg.Button("OK"), sg.Button("Exit")] 
+            ]
+        
+elif CurrentOS == "Darwin":
+    ports = serial.tools.list_ports.comports() # Get a COM port list
+    ports_list = []
+    for port, desc, hwid in sorted(ports): # Get all COM port name
+        ports_list.append("{}: {}".format(port, desc))
     layout_config = [
-        [sg.Text('Port'), sg.Combo(values = ports_list,  default_value = Arduino_port[0],size = (40,1), key = "-COM_Port-")],
+        [sg.Text('Port'), sg.Combo(values = ports_list,  default_value = ports_list[0],size = (40,1), key = "-COM_Port-")],
         [sg.Text('Baud'), sg.Combo(values = [9600], default_value = 9600,size = (20,1), key = "-Baud-")],
         [sg.Button("OK"), sg.Button("Exit")] 
         ]
@@ -51,7 +67,12 @@ if Test_mode:
     sg.popup("Will enter test mode")
 
 else:
-    COM_port = values["-COM_Port-"]
+    # Define port name based on os
+    if CurrentOS == "Windows":
+        COM_port = values["-COM_Port-"]
+    elif CurrentOS == "Darwin":
+        COM_port = values["-COM_Port-"].split(":")[0]
+
     Baud = values["-Baud-"]
     ser = serial.Serial(COM_port, Baud, timeout=1)
     time.sleep(1) # Pause for 1 sencond to wait for response from the Arduino

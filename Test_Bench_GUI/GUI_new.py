@@ -17,9 +17,22 @@ from customtkinter import filedialog
 from PIL import Image
 from CTkTable import *
 import time
+import platform
+from Configure_Arduino import Configure_Arduino
+from Global_var import status
+import re
+import threading
+from Output import OutputProcess
+from Arduino import Arduino
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+
+#Initialize status variables
+status.Arduino_connection_real = False
+status.Arduino_connection = False
+status.ser = None
+status.TestMode = False
 
 class MB_frame_right(customtkinter.CTkFrame):
     def __init__(self, master):
@@ -61,14 +74,14 @@ class MB_window(customtkinter.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
-        self.button_file = customtkinter.CTkButton(self, text="Arduino Configuration", command=Configure_Arduino)
-        self.button_file.grid(row=0, column=0, padx=10, pady=(10,0), sticky="ew")
+        self.button_Arduino_config = customtkinter.CTkButton(self, text="Arduino Configuration", command=Configure_Arduino)
+        self.button_Arduino_config.grid(row=0, column=0, padx=10, pady=(10,0), sticky="ew")
 
         self.button_file = customtkinter.CTkButton(self, text="select file", command=self.selectfile)
         self.button_file.grid(row=1, column=0, padx=10, pady=(10,0), sticky="ew")
 
         self.entry_file = customtkinter.CTkEntry(self, placeholder_text="Save data file at ...")
-        self.entry_file.grid(row=2, column=1, columnspan=2, padx=(10, 0), pady=(20, 20), sticky="nsew")
+        self.entry_file.grid(row=1, column=1, columnspan=2, padx=(10, 0), pady=(10, 0), sticky="nsew")
 
         self.label_TestBench = customtkinter.CTkLabel(self, text="Select a test bench", anchor="w")
         self.label_TestBench.grid(row=2, column=0, padx=10, pady=(10, 0), sticky="nsew")
@@ -90,7 +103,7 @@ class MB_window(customtkinter.CTkFrame):
         self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.show_warning, hover = True)
         self.button_run.grid(row=6, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
-        self.button_showresult = customtkinter.CTkButton(self, text="SHOW RESULT", command=result_window.make_result_window, hover = True)
+        self.button_showresult = customtkinter.CTkButton(self, text="SHOW RESULT", command=None, hover = True)
         self.button_showresult.grid(row=7, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=self.show_warning, hover = True)
@@ -111,51 +124,64 @@ class MB_window(customtkinter.CTkFrame):
         filename = filedialog.askopenfilename()
         print(filename)
 
-class result_window(customtkinter.CTkToplevel):
-    def __init__(self):
-        super().__init__()
 
-        self.title("Results")
-        self.geometry("400x200")
-        image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Logo")
-        self.iconbitmap(os.path.join(image_path, "result_table.ico"))
-        self.draw_table()
-        self.focus()
+class Chameleon_window(customtkinter.CTkFrame):
+    def __init__(self, master):
+        super().__init__(master)
 
-    def draw_table(self, value):
-        value = [[1,2,3,4,5],
-                [1,2,3,4,5],
-                [1,2,3,4,5],
-                [1,2,3,4,5],
-                [1,2,3,4,5]]
+        self.button_Arduino_config = customtkinter.CTkButton(self, text="Arduino Configuration", command=Configure_Arduino)
+        self.button_Arduino_config.grid(row=0, column=0, padx=10, pady=(10,0), sticky="ew")
 
-        table = CTkTable(self, row=5, column=5, values=value)
-        table.pack(expand=True, fill="both", padx=20, pady=20)
+        self.button_file = customtkinter.CTkButton(self, text="select file", command=self.selectfile)
+        self.button_file.grid(row=1, column=0, padx=10, pady=(10,0), sticky="ew")
 
-    def make_result_window(): 
-        headings_table = ['R', 'G', 'B', 'C','cur_avg', 'time', 'average_10']
-        result_table = []
-        layout_table = [
-            [sg.Text('Reaction time: '), sg.Text('NA', key = '-ReactionTime-')],  # Add stop watch
-            [sg.Text('Stop time: '), sg.Text('NA', key = '-StopTime-')], # Indicate total reaction time once the reaction stops
-            [sg.Table( values = result_table,
-                        headings = headings_table,
-                        max_col_width=40,
-                        auto_size_columns=False,
-                        def_col_width=10,
-                        display_row_numbers=True,
-                        justification='middle',
-                        num_rows=20,
-                        key = '-ResultTable-',
-                        row_height=30
-            )]
-        ]
+        self.entry_file = customtkinter.CTkEntry(self, placeholder_text="Save data file at ...")
+        self.entry_file.grid(row=1, column=1, columnspan=2, padx=(10, 0), pady=(10, 0), sticky="nsew")
 
-        return sg.Window(title = "Sensor Reading", layout=layout_table, size=(800, 600), finalize=True, resizable=True, background_color='white')
+        self.label_TestBench = customtkinter.CTkLabel(self, text="Select a test bench", anchor="w")
+        self.label_TestBench.grid(row=2, column=0, padx=10, pady=(10, 0), sticky="nsew")
+
+        self.optionmenu_TestBench = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
+                                                        values=["A: test bench", "B: car", "C"])
+        self.optionmenu_TestBench.grid(row=3, column=0, padx=10, pady=(0, 10))
+
+        self.label_KohConc = customtkinter.CTkLabel(self, text="Input the KOH concentration", anchor="w")
+        self.label_KohConc.grid(row=4, column=0, padx=10, pady=(10, 0), sticky="nsew")
+
+        self.optionmenu_KohConc = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
+                                                        values=["g/100mL", "g/25mL", "M", "wt%"])
+        self.optionmenu_KohConc.grid(row=5, column=0, padx=10, pady=(0, 10))
+
+        self.entry_KohConc = customtkinter.CTkEntry(self, placeholder_text="KOH concentration")
+        self.entry_KohConc.grid(row=5, column=1, columnspan=2, padx=(20, 0), pady=(0, 10), sticky="nsew")
+
+        self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.RunReaction, hover = True)
+        self.button_run.grid(row=6, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+
+        self.button_showresult = customtkinter.CTkButton(self, text="SHOW RESULT", command=self.outputWindow, hover = True)
+        self.button_showresult.grid(row=7, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+
+        self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=None, hover = True)
+        self.button_pause.grid(row=8, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+
+        self.button_reset = customtkinter.CTkButton(self, text="RESET", command=None, hover = True)
+        self.button_reset.grid(row=9, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+
+    def RunReaction(self):
+        Arduino.execute('s')
+
+    def outputWindow(self):
+        new_window = OutputProcess()
+        new_window.auto_log_on()
+
+    def selectfile(self):
+        filename = filedialog.askopenfilename()
+        print(filename)
 
 class Testing_window(customtkinter.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
+        self.auto = False
 
         self.sensor_reading_display = customtkinter.CTkTextbox(self, width=500, height=300, corner_radius=5)
         self.sensor_reading_display.grid(row=0, column=0, columnspan=2, padx=10, pady=(10, 0), sticky="nsew")
@@ -163,37 +189,99 @@ class Testing_window(customtkinter.CTkFrame):
         self.command_input = customtkinter.CTkEntry(self)
         self.command_input.grid(row=1, column=0, padx=10, pady=(10, 0), sticky="nsew")
 
-        self.command_send = customtkinter.CTkButton(self, text="SEND")
+        self.command_send = customtkinter.CTkButton(self, text="SEND", command=self.send_command)
         self.command_send.grid(row=1, column=1, padx=10, pady=(10, 0), sticky="nsew")
 
-class Configure_Arduino(customtkinter.CTkToplevel):
-    def __init__(self):
-        super().__init__()
+        self.read_line = customtkinter.CTkButton(self, text="READ", command=self.write_output)
+        self.read_line.grid(row=2, column=1, padx=10, pady=(10, 0), sticky="nsew")
 
-        self.title("Arduino Configuration")
-        self.geometry("400x400")
-        self.after(10, self.lift) # Add this to keep the new window float atop
+        self.LogData_win = customtkinter.CTkButton(self, text="LOG WINDOW", command=self.auto_log_open)
+        self.LogData_win.grid(row=3, column=1, padx=10, pady=(10, 0), sticky="nsew")
 
-        self.Cfg_Arduino_COM_label = customtkinter.CTkLabel(self, text="Choose a COM port", anchor="w")
-        self.Cfg_Arduino_COM_label.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
+        self.LogData = customtkinter.CTkButton(self, text="AUTO LOG ON", command=self.auto_log_on)
+        self.LogData.grid(row=4, column=1, padx=10, pady=(10, 0), sticky="nsew")
 
-        self.Cfg_Arduino_COM_label = customtkinter.CTkLabel(self, text="Choose a COM port", anchor="w")
-        self.Cfg_Arduino_COM_label.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
+        self.LogData_Off = customtkinter.CTkButton(self, text="AUTO LOG OFF", command=self.auto_log_off)
+        self.LogData_Off.grid(row=5, column=1, padx=10, pady=(10, 0), sticky="nsew")
 
+    def send_command(self):
+        command = self.command_input.get()
+        if command == '':
+            msg = CTkMessagebox(title="Command ERROR", message="Please input command", icon="warning", option_1="OK")
+        else:
+            Arduino.execute(command)
+
+    def write_output(self):
+        # print(status.Arduino_connection)
+        if status.Arduino_connection:
+            output = Arduino.read_output()
+            self.sensor_reading_display.insert('end', output)
+            self.sensor_reading_display.insert('end', '\n')
+            # print(output)
+
+    # Start a new thread to process the Arduino output so the main window won't be stuck
+    def auto_log_thread(self):
+        thread1 = threading.Thread(target=self.auto_log)
+        thread1.start()
+
+    def auto_log_open(self):
+        self.log_window = customtkinter.CTkToplevel()
+        self.log_window.title("Arduino readings")
+        self.log_window.geometry("550x350")
+        self.result_box = customtkinter.CTkTextbox(self.log_window, width=500, height=300, corner_radius=5)
+        self.result_box.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
+
+    def auto_log(self):
+        if status.Arduino_connection:
+            self.auto_log_open()
+            print("test")
+
+            while self.auto:
+                output = Arduino.read_output()
+                self.result_box.insert('end', output)
+                self.result_box.insert('end', '\n')
+                self.result_box.see('end')
+                if self.auto == False:
+                    break
+
+    def auto_log_on(self):
+        self.auto = True
+        self.auto_log_thread()
+
+    def auto_log_off(self):
+        # self.auto_log_on()
+        self.auto = False
 
 class Setting_window(customtkinter.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
-        self.label_KohConc = customtkinter.CTkLabel(self, text="Choose a colour theme", anchor="w")
-        self.label_KohConc.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
+        self.label_appearance = customtkinter.CTkLabel(self, text="Choose a colour theme", anchor="w")
+        self.label_appearance.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
 
         self.appearance_mode_menu = customtkinter.CTkOptionMenu(self, values=["Light", "Dark", "System"],
                                                                 command=self.change_appearance_mode_event)
         self.appearance_mode_menu.grid(row=1, column=0, padx=20, pady=(0, 10), sticky="s")
 
+        self.label_TestMode = customtkinter.CTkLabel(self, text="Test mode", anchor="w")
+        self.label_TestMode.grid(row=2, column=0, padx=10, pady=(10, 0), sticky="nsew")
+
+        self.switch_TestMode_var = customtkinter.StringVar(value="Off")
+        self.switch_TestMode = customtkinter.CTkSwitch(self, text="On", command=self.test_mode, 
+                                                       variable=self.switch_TestMode_var, onvalue="On", offvalue="Off")
+        self.switch_TestMode.grid(row=3, column=0, padx=20, pady=(0, 10), sticky="s")
+
     def change_appearance_mode_event(self, new_appearance_mode):
         customtkinter.set_appearance_mode(new_appearance_mode)
+
+    def test_mode(self):
+        if self.switch_TestMode_var.get() == "On":
+            status.Arduino_connection = True
+            print("1")
+        elif self.switch_TestMode_var.get() == "Off":
+            if status.Arduino_connection_real == False:
+                status.Arduino_connection = False
+            print("2")
 
 class App(customtkinter.CTk):
     def __init__(self):
@@ -203,7 +291,7 @@ class App(customtkinter.CTk):
 
         self.title("(REACTOR) Real-time Experiment Analysis Control and Tracking for Optimization and Records")
         
-        self.geometry("800x400")
+        self.geometry("800x500")
         # self.grid_columnconfigure(0, weight=1)
         # self.grid_columnconfigure(1, weight=1)
         # self.grid_columnconfigure(2, weight=1)
@@ -261,6 +349,9 @@ class App(customtkinter.CTk):
 
         # create Chameleon frame
         self.Chameleon_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+
+        self.Chameleon = Chameleon_window(self.Chameleon_frame)
+        self.Chameleon.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsw")
 
         # create testing frame
         self.testing_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")

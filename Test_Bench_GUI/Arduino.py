@@ -1,0 +1,35 @@
+from Global_var import status
+import customtkinter
+from CTkMessagebox import CTkMessagebox
+import pandas as pd
+import re
+import serial
+
+
+
+class Arduino():
+    def __init__(self):
+        pass
+
+    def execute(command):
+        if status == False:
+            msg = CTkMessagebox(title="Connection ERROR", message="Arduino is not connected", icon="warning", option_1="OK")
+        elif command not in ["s", "t"]:
+            msg = CTkMessagebox(title="Command ERROR", message="The command cannot be interpreted", icon="warning", option_1="OK")
+        else:
+            status.ser.write(str.encode(command))
+
+    def read_output():
+        ser = status.ser
+        output_line = ser.readline()
+        output_line = output_line.decode("utf-8")
+        output_line = output_line[0:-5]
+        output_line_split = re.split(', |\:', output_line) # Split the result using ", " or "."
+        if len(output_line_split) % 2 == 1:     # Make sure the length of the list is even
+            output_line_split = output_line_split[:-1]
+        output_dict = {output_line_split[i]: output_line_split[i + 1] for i in range(0, len(output_line_split), 2)}
+        desired_keys = ['R', 'G', 'B', 'C']
+        filtered_dict = {key: [float(value)] for key, value in output_dict.items() if key in desired_keys}
+        df = pd.DataFrame(filtered_dict)
+
+        return df 
