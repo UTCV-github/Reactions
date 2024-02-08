@@ -32,7 +32,8 @@ Connect SDA to analog 4
 Connect VDD to 3.3V DC
 Connect GROUND to common ground */
 /* Initialise with default values (int time = 2.4ms, gain = 1x) */
-Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_120MS, TCS34725_GAIN_1X);
+//TCS34725_INTEGRATIONTIME_154MS for a max of 65525 reading, TCS34725_INTEGRATIONTIME_120MS can only yield 51200
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_154MS, TCS34725_GAIN_1X);
 /* Initialise with specific int time and gain values */
 
 // Car Motor

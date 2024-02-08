@@ -28,7 +28,7 @@ class Arduino():
         if len(output_line_split) % 2 == 1:     # Make sure the length of the list is even
             output_line_split = output_line_split[:-1]
         output_dict = {output_line_split[i]: output_line_split[i + 1] for i in range(0, len(output_line_split), 2)}
-        desired_keys = ['R', 'G', 'B', 'C']
+        desired_keys = ['R', 'G', 'B', 'C', 'Time']
         filtered_dict = {key: [float(value)] for key, value in output_dict.items() if key in desired_keys}
         df = pd.DataFrame(filtered_dict)
         # if output_type == "df": 
@@ -39,7 +39,7 @@ class Arduino():
         
         # else:
             # return df 
-        return filtered_dict
+        return df
     
     def read_output_raw():
         ser = status.ser
@@ -48,5 +48,4 @@ class Arduino():
         output_line = output_line[0:-5] # remove " \n\r" at the end of the string
 
         return output_line 
-    
     

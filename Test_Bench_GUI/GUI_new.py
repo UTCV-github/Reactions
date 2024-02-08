@@ -33,6 +33,8 @@ status.Arduino_connection_real = False
 status.Arduino_connection = False
 status.ser = None
 status.TestMode = False
+Output = pd.DataFrame()
+Output_previous = pd.DataFrame()
 
 class RGBC_switch(customtkinter.CTkFrame):
     def __init__(self, master):
@@ -157,17 +159,41 @@ class Chameleon_window(customtkinter.CTkFrame):
         self.entry_KohConc = customtkinter.CTkEntry(self, placeholder_text="KOH concentration")
         self.entry_KohConc.grid(row=5, column=1, columnspan=2, padx=(20, 0), pady=(0, 10), sticky="nsew")
 
-        self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.RunReaction, hover = True)
-        self.button_run.grid(row=6, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        self.label_DexConc = customtkinter.CTkLabel(self, text="Input the Dextrose concentration", anchor="w")
+        self.label_DexConc.grid(row=6, column=0, padx=10, pady=(10, 0), sticky="nsew")
 
-        # self.button_showresult = customtkinter.CTkButton(self, text="SHOW RESULT", command=self.outputWindow, hover = True)
-        # self.button_showresult.grid(row=7, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        self.optionmenu_DexConc = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
+                                                        values=["g/100mL", "g/25mL", "M", "wt%"])
+        self.optionmenu_DexConc.grid(row=7, column=0, padx=10, pady=(0, 10))
+
+        self.entry_DexConc = customtkinter.CTkEntry(self, placeholder_text="Dex concentration")
+        self.entry_DexConc.grid(row=7, column=1, columnspan=2, padx=(20, 0), pady=(0, 10), sticky="nsew")
+
+        self.label_Kmno4Conc = customtkinter.CTkLabel(self, text="Input the KMnO\u2084 concentration", anchor="w")
+        self.label_Kmno4Conc.grid(row=8, column=0, padx=10, pady=(10, 0), sticky="nsew")
+
+        self.optionmenu_Kmno4Conc = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
+                                                        values=["g/500mL", "g/100mL", "g/25mL", "M", "wt%"])
+        self.optionmenu_Kmno4Conc.grid(row=9, column=0, padx=10, pady=(0, 20))
+
+        self.entry_Kmno4Conc = customtkinter.CTkEntry(self, placeholder_text="KMnO\u2084 concentration")
+        self.entry_Kmno4Conc.grid(row=9, column=1, columnspan=2, padx=(20, 0), pady=(0, 20), sticky="nsew")
+
+        self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.RunReaction, hover = True)
+        self.button_run.grid(row=10, column=0, columnspan=3, rowspan=2, padx=10, pady=5, sticky="ew")
+        self.grid_rowconfigure(11, weight=1)
+
+        self.button_showresult = customtkinter.CTkButton(self, text="DISPLAY GRAPH", command=self.DisplayGraph, hover = True)
+        self.button_showresult.grid(row=12, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+
+        self.button_showresult = customtkinter.CTkButton(self, text="Draw", command=self.GraphicAuto, hover = True)
+        self.button_showresult.grid(row=13, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=self.StopReaction, hover = True)
-        self.button_pause.grid(row=8, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        self.button_pause.grid(row=14, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.button_reset = customtkinter.CTkButton(self, text="RESET", command=None, hover = True)
-        self.button_reset.grid(row=9, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        self.button_reset.grid(row=15, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
     def RunReaction(self):
         Arduino.execute('s')
@@ -187,6 +213,29 @@ class Chameleon_window(customtkinter.CTkFrame):
     def selectfile(self):
         filename = filedialog.askopenfilename()
         print(filename)
+
+    def DisplayGraph(self):
+        self.graph = OutputProcess()
+        test = self.graph.GraphicOutput_Setup()
+
+    def DrawGraph(self):
+        self.draw = OutputProcess()
+        test = self.draw.GraphicDraw()
+
+    def GraphicAuto(self):
+        self.DisplayGraph()
+        global Output
+        data = Output
+        previous_output = pd.DataFrame()
+        self.draw = OutputProcess()
+        while True:
+            try:
+                self.draw.GraphicDraw(data)
+            except data.equals(previous_output):
+                pass
+            auto = Output.auto
+            if auto == False:
+                break
 
 class Testing_window(customtkinter.CTkFrame):
     def __init__(self, master):
@@ -301,7 +350,7 @@ class App(customtkinter.CTk):
 
         self.title("(REACTOR) Real-time Experiment Analysis Control and Tracking for Optimization and Records")
         
-        self.geometry("800x500")
+        self.geometry("800x600")
         # self.grid_columnconfigure(0, weight=1)
         # self.grid_columnconfigure(1, weight=1)
         # self.grid_columnconfigure(2, weight=1)
