@@ -6,16 +6,22 @@ from Arduino import Arduino
 import matplotlib.pyplot as plt
 from Result import result
 import pandas as pd
+import queue
+import time
 
 class OutputProcess():
-    def __init__(self) -> None:
-        self.output = pd.DataFrame
+    def __init__(self):
+        self.output = pd.DataFrame()
         self.auto = None
+        self.OutputQueue = queue.Queue()
+        self.lock =threading.Lock()
 
     # Start a new thread to process the Arduino output so the main window won't be stuck
     def auto_log_thread(self):
-        thread1 = threading.Thread(target=self.auto_log)
-        thread1.start()
+        if status.Arduino_connection:
+            # self.auto_log_open()
+            thread1 = threading.Thread(target=self.auto_log)
+            thread1.start() 
         # thread2 = threading.Thread(target=self.GraphicAuto)
         # thread2.start()
 
@@ -26,25 +32,27 @@ class OutputProcess():
         self.log_window.after(10, self.log_window.lift)
         self.result_box = customtkinter.CTkTextbox(self.log_window, width=500, height=300, corner_radius=5)
         self.result_box.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
+        self.result_box_pause = customtkinter.CTkButton(self.log_window, text="PAUSE", command=self.StopReaction, hover = True)
+        self.result_box_pause.grid(row=1, column=0, padx=10, pady=(10, 0), sticky="nsew")
 
     def auto_log(self):
-        if status.Arduino_connection:
-            self.auto_log_open()
-
-            while self.auto:
-                self.output = Arduino.read_output()
-                global Output
-                Output = self.output
-                # result.output.append(self.output)
-                self.result_box.insert('end', self.output)
-                self.result_box.insert('end', '\n')
-                self.result_box.see('end')
-                if self.auto == False:
-                    break
+        while self.auto:
+            self.output = Arduino.read_output()
+            # self.lock.acquire()
+            self.OutputQueue.put(self.output)
+            result.Output_list.append(self.output)
+            # self.lock.release()
+            self.result_box.insert('end', self.output)
+            self.result_box.insert('end', '\n')
+            self.result_box.see('end')
+            if self.auto == False:
+                break
 
     def auto_log_on(self):
         self.auto = True
         self.auto_log_thread()
+        # print('Auto log on')
+        # self.GraphicAuto()
 
     def auto_log_off(self):
         # self.auto_log_on()
@@ -63,27 +71,40 @@ class OutputProcess():
         #     global Output
         #     data = Output
         # print(data)
-        x = data.Time.iloc[-1]
-        y = data.C.iloc[-1]
-        dot, = self.ax.plot(x, y,'.', color = 'lightblue', markersize = 10)
-        # dot, = ax.plot(float(result.time), int(result.cur_avg),'.', color = 'lightgreen', markersize = 5)
-        self.ax.draw_artist(dot)
-        self.fig.canvas.blit(self.fig.bbox) 
+        if not data.empty():
+            x = data.Time.iloc[-1]
+            y = data.C.iloc[-1]
+            dot, = self.ax.plot(x, y,'.', color = 'lightblue', markersize = 10)
+            # dot, = ax.plot(float(result.time), int(result.cur_avg),'.', color = 'lightgreen', markersize = 5)
+            self.ax.draw_artist(dot)
+            self.fig.canvas.blit(self.fig.bbox)
+        else:
+            print('No data to be plotted')
 
     def GraphicAuto(self):
-        self.GraphicOutput_Setup()
-        global Output
-        data = Output
-        previous_output = pd.DataFrame()
-        while True:
+        # self.GraphicOutput_Setup()
+        print('self.auto is', self.auto)
+        while self.auto: 
             try:
-                self.GraphicDraw(data)
-            except data.equals(previous_output):
+                print('getting data...')
+                self.lock.acquire()
+                data = self.OutputQueue.get()
+                print(data)
+                self.lock.release()
+                # self.GraphicDraw(data)
+            except self.OutputQueue.empty():
+                print('pass')
                 pass
 
-            if self.auto == False:
+            if self.auto == False and self.OutputQueue.empty(): # Make sure the data in the queue is all plotted
+                print('break')
                 break
+
+    def SendOutput(self):
+        return self.output
     
-    def DrawGraphThread(self):
-        thread2 = threading.Thread(target=self.GraphicAuto)
-        thread2.start()
+    def StopReaction(self):
+        Arduino.execute('t')
+        self.auto_log_off()
+        result.Output_save = pd.concat(result.Output_list)
+    

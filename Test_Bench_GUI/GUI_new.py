@@ -1,4 +1,3 @@
-import PySimpleGUI as sg
 import serial
 import serial.tools.list_ports
 import time
@@ -7,7 +6,6 @@ import csv
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import os
 
 import tkinter
 import tkinter.messagebox
@@ -24,6 +22,9 @@ import re
 import threading
 from Output import OutputProcess
 from Arduino import Arduino
+import queue
+import os
+from Result import result
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -49,7 +50,7 @@ class RGBC_switch(customtkinter.CTkFrame):
         self.switch_c = customtkinter.CTkSwitch(self, text="C value")
         self.switch_c.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="w")
 
-        self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.show_warning, hover = True)
+        self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.save_data, hover = True)
         self.button_save.grid(row=8, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
     def get(self):
@@ -71,6 +72,23 @@ class RGBC_switch(customtkinter.CTkFrame):
     
         if msg.get()=="Retry":
             self.show_warning()
+
+    def save_msg(self):
+        msg = CTkMessagebox(title="Data Saved", message="Data successfully saved!",
+                    icon="check", option_1="OK")
+
+    def save_data(self):
+        if not result.Output_save.empty:
+            os.makedirs('Saved_data', exist_ok=True)
+            now = datetime.now()
+            date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
+            file_name =  os.path.dirname(__file__) + "/Saved_data/Cache_" + date_time + ".csv"
+            result.Output_save.to_csv(file_name, index = False)
+            if os.path.exists(file_name):
+                self.save_msg()
+        else:
+            self.show_warning()
+
     
 class MB_window(customtkinter.CTkFrame):
     def __init__(self, master):
@@ -183,10 +201,10 @@ class Chameleon_window(customtkinter.CTkFrame):
         self.button_run.grid(row=10, column=0, columnspan=3, rowspan=2, padx=10, pady=5, sticky="ew")
         self.grid_rowconfigure(11, weight=1)
 
-        self.button_showresult = customtkinter.CTkButton(self, text="DISPLAY GRAPH", command=self.DisplayGraph, hover = True)
+        self.button_showresult = customtkinter.CTkButton(self, text="DISPLAY GRAPH", command=self.DisplayGraph, hover = True, state='disabled')
         self.button_showresult.grid(row=12, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
-        self.button_showresult = customtkinter.CTkButton(self, text="Draw", command=self.GraphicAuto, hover = True)
+        self.button_showresult = customtkinter.CTkButton(self, text="Draw", command=self.GraphicAuto, hover = True, state='disabled')
         self.button_showresult.grid(row=13, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=self.StopReaction, hover = True)
@@ -197,45 +215,41 @@ class Chameleon_window(customtkinter.CTkFrame):
 
     def RunReaction(self):
         Arduino.execute('s')
+        result.Output_list = []
         self.outputWindow()
 
     def StopReaction(self):
         Arduino.execute('t')
         try:
             self.new_window.auto_log_off()
+            result.Output_save = pd.concat(result.Output_list)
         except self.new_window == None:
             pass
 
     def outputWindow(self):
         self.new_window = OutputProcess()
+        self.new_window.auto_log_open()
         self.new_window.auto_log_on()
+
+    def ResultWindowOpen(self):
+        self.new_window = OutputProcess()
+        self.new_window.auto_log_open()
 
     def selectfile(self):
         filename = filedialog.askopenfilename()
         print(filename)
 
     def DisplayGraph(self):
-        self.graph = OutputProcess()
-        test = self.graph.GraphicOutput_Setup()
+        self.new_window = OutputProcess()
+        test = self.new_window.auto_log_open()
 
     def DrawGraph(self):
         self.draw = OutputProcess()
         test = self.draw.GraphicDraw()
 
     def GraphicAuto(self):
-        self.DisplayGraph()
-        global Output
-        data = Output
-        previous_output = pd.DataFrame()
         self.draw = OutputProcess()
-        while True:
-            try:
-                self.draw.GraphicDraw(data)
-            except data.equals(previous_output):
-                pass
-            auto = Output.auto
-            if auto == False:
-                break
+        drawing = self.draw.GraphicAuto()
 
 class Testing_window(customtkinter.CTkFrame):
     def __init__(self, master):
@@ -468,8 +482,6 @@ class App(customtkinter.CTk):
     def frame_setting_button_event(self):
         self.select_frame_by_name("setting")    
 
-    def button_callback(self):
-        sg.popup("Will enter test mode")
 
     # def show_warning(self):
     # # Show some retry/cancel warnings
