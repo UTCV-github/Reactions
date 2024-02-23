@@ -8,22 +8,20 @@ from Result import result
 import pandas as pd
 import queue
 import time
+from Graphic import Plotting
 
 class OutputProcess():
-    def __init__(self):
+    def __init__(self, SensorReadingQueue):
         self.output = pd.DataFrame()
         self.auto = None
-        self.OutputQueue = queue.Queue()
-        self.lock =threading.Lock()
+        self.OutputQueue = SensorReadingQueue
 
     # Start a new thread to process the Arduino output so the main window won't be stuck
     def auto_log_thread(self):
         if status.Arduino_connection:
-            # self.auto_log_open()
+            self.auto_log_open()
             thread1 = threading.Thread(target=self.auto_log)
             thread1.start() 
-        # thread2 = threading.Thread(target=self.GraphicAuto)
-        # thread2.start()
 
     def auto_log_open(self):
         self.log_window = customtkinter.CTkToplevel()
@@ -35,17 +33,22 @@ class OutputProcess():
         self.result_box_pause = customtkinter.CTkButton(self.log_window, text="PAUSE", command=self.StopReaction, hover = True)
         self.result_box_pause.grid(row=1, column=0, padx=10, pady=(10, 0), sticky="nsew")
 
+        self.graph = Plotting(self.OutputQueue)
+
     def auto_log(self):
         while self.auto:
             self.output = Arduino.read_output()
-            # self.lock.acquire()
-            self.OutputQueue.put(self.output)
-            result.Output_list.append(self.output)
-            # self.lock.release()
-            self.result_box.insert('end', self.output)
-            self.result_box.insert('end', '\n')
-            self.result_box.see('end')
+            if not self.output.empty:
+                self.OutputQueue.put(self.output)
+                result.Output_list.append(self.output)
+                self.result_box.insert('end', self.output)
+                self.result_box.insert('end', '\n')
+                self.result_box.see('end')
+
+            self.graph.update()
+
             if self.auto == False:
+                print("Auto log paused")
                 break
 
     def auto_log_on(self):

@@ -6,4 +6,4 @@ class status():
         self.Arduino_connection = False # Used to cheat in test mode
         self.ser = None
         self.TestMode = False
-        
+        self.SensorDataSelect = [] # Used to store what data (rgbc) to be read from the sensor

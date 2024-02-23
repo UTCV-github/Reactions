@@ -7,8 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-import tkinter
-import tkinter.messagebox
 import customtkinter
 from CTkMessagebox import CTkMessagebox
 from customtkinter import filedialog
@@ -25,6 +23,7 @@ from Arduino import Arduino
 import queue
 import os
 from Result import result
+from Graphic import Plotting
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -35,23 +34,36 @@ status.Arduino_connection = False
 status.ser = None
 status.TestMode = False
 Output = pd.DataFrame()
-Output_previous = pd.DataFrame()
+# Output_previous = pd.DataFrame()
 
 class RGBC_switch(customtkinter.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
-        self.switch_r = customtkinter.CTkSwitch(self, text="R value")
+        self.switch_var_r = customtkinter.StringVar(value = '1')
+        self.switch_r = customtkinter.CTkSwitch(self, text="R value", command=self.switcher, variable=self.switch_var_r, onvalue='1', offvalue='0')
         self.switch_r.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="w")
-        self.switch_g = customtkinter.CTkSwitch(self, text="G value")
+        self.switch_var_g = customtkinter.StringVar(value = '2')
+        self.switch_g = customtkinter.CTkSwitch(self, text="G value", command=self.switcher, variable=self.switch_var_g, onvalue='2', offvalue='0')
         self.switch_g.grid(row=1, column=0, padx=10, pady=(10, 0), sticky="w")
-        self.switch_b = customtkinter.CTkSwitch(self, text="B value")
+        self.switch_var_b = customtkinter.StringVar(value = '3')
+        self.switch_b = customtkinter.CTkSwitch(self, text="B value", command=self.switcher, variable=self.switch_var_b, onvalue='3', offvalue='0')
         self.switch_b.grid(row=2, column=0, padx=10, pady=(10, 0), sticky="w")
-        self.switch_c = customtkinter.CTkSwitch(self, text="C value")
+        self.switch_var_c = customtkinter.StringVar(value = '4')
+        self.switch_c = customtkinter.CTkSwitch(self, text="C value", command=self.switcher, variable=self.switch_var_c, onvalue='4', offvalue='0')
         self.switch_c.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="w")
 
         self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.save_data, hover = True)
         self.button_save.grid(row=8, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+
+    def switcher(self):
+        ls_sensor_readings = []
+        for i in [self.switch_var_r, self.switch_var_g, self.switch_var_b, self.switch_var_c]:
+            switch_status = i.get()
+            if i.get() != '0':
+                ls_sensor_readings.append(switch_status)
+        status.SensorDataSelect = ls_sensor_readings
+        print(status.SensorDataSelect)
 
     def get(self):
         ls_sensor_readings = []
@@ -201,25 +213,24 @@ class Chameleon_window(customtkinter.CTkFrame):
         self.button_run.grid(row=10, column=0, columnspan=3, rowspan=2, padx=10, pady=5, sticky="ew")
         self.grid_rowconfigure(11, weight=1)
 
-        self.button_showresult = customtkinter.CTkButton(self, text="DISPLAY GRAPH", command=self.DisplayGraph, hover = True, state='disabled')
+        self.button_showresult = customtkinter.CTkButton(self, text="REGISTER CHEMICAL", command=None, hover = True, state='disabled')
         self.button_showresult.grid(row=12, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
-
-        self.button_showresult = customtkinter.CTkButton(self, text="Draw", command=self.GraphicAuto, hover = True, state='disabled')
-        self.button_showresult.grid(row=13, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=self.StopReaction, hover = True)
         self.button_pause.grid(row=14, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
-        self.button_reset = customtkinter.CTkButton(self, text="RESET", command=None, hover = True)
+        self.button_reset = customtkinter.CTkButton(self, text="RESET", command=self.Reset, hover = True)
         self.button_reset.grid(row=15, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
     def RunReaction(self):
         Arduino.execute('s')
+        self.button_run.configure(state = 'disabled')
         result.Output_list = []
         self.outputWindow()
 
     def StopReaction(self):
         Arduino.execute('t')
+        self.button_run.configure(state = 'normal')
         try:
             self.new_window.auto_log_off()
             result.Output_save = pd.concat(result.Output_list)
@@ -227,29 +238,16 @@ class Chameleon_window(customtkinter.CTkFrame):
             pass
 
     def outputWindow(self):
-        self.new_window = OutputProcess()
-        self.new_window.auto_log_open()
+        SensorReadingQueue = queue.Queue()
+        self.new_window = OutputProcess(SensorReadingQueue)
         self.new_window.auto_log_on()
-
-    def ResultWindowOpen(self):
-        self.new_window = OutputProcess()
-        self.new_window.auto_log_open()
 
     def selectfile(self):
         filename = filedialog.askopenfilename()
         print(filename)
 
-    def DisplayGraph(self):
-        self.new_window = OutputProcess()
-        test = self.new_window.auto_log_open()
-
-    def DrawGraph(self):
-        self.draw = OutputProcess()
-        test = self.draw.GraphicDraw()
-
-    def GraphicAuto(self):
-        self.draw = OutputProcess()
-        drawing = self.draw.GraphicAuto()
+    def Reset(self):
+        self.button_run.configure(state = 'normal')
 
 class Testing_window(customtkinter.CTkFrame):
     def __init__(self, master):

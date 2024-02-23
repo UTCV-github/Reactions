@@ -24,7 +24,7 @@ class Arduino():
         output_line = ser.readline()
         output_line = output_line.decode("utf-8")
         output_line = output_line[0:-5]
-        output_line_split = re.split(', |\:', output_line) # Split the result using ", " or "."
+        output_line_split = re.split(', |:', output_line) # Split the result using ", " or "."
         if len(output_line_split) % 2 == 1:     # Make sure the length of the list is even
             output_line_split = output_line_split[:-1]
         output_dict = {output_line_split[i]: output_line_split[i + 1] for i in range(0, len(output_line_split), 2)}
