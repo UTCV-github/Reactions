@@ -14,16 +14,18 @@ from PIL import Image
 from CTkTable import *
 import time
 import platform
-from Configure_Arduino import Configure_Arduino
-from Global_var import status
 import re
 import threading
-from Output import OutputProcess
-from Arduino import Arduino
 import queue
 import os
+
+from Configure_Arduino import Configure_Arduino
+from Global_var import status
+from Output import OutputProcess
+from Arduino import Arduino
 from Result import result
 from Graphic import Plotting
+from Register import chemicals
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -33,6 +35,10 @@ status.Arduino_connection_real = False
 status.Arduino_connection = False
 status.ser = None
 status.TestMode = False
+status.SensorDataSelect = ['R', 'G', 'B', 'C']
+status.colourdict = {'R':'#EB3B36', 'G':'#18F02B', 'B':'#5877EA', 'C':'#F08D33'}
+status.stopping_trigger = False
+
 Output = pd.DataFrame()
 # Output_previous = pd.DataFrame()
 
@@ -40,17 +46,17 @@ class RGBC_switch(customtkinter.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
-        self.switch_var_r = customtkinter.StringVar(value = '1')
-        self.switch_r = customtkinter.CTkSwitch(self, text="R value", command=self.switcher, variable=self.switch_var_r, onvalue='1', offvalue='0')
+        self.switch_var_r = customtkinter.StringVar(value = 'R')
+        self.switch_r = customtkinter.CTkSwitch(self, text="R value", command=self.switcher, variable=self.switch_var_r, onvalue='R', offvalue='0')
         self.switch_r.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="w")
-        self.switch_var_g = customtkinter.StringVar(value = '2')
-        self.switch_g = customtkinter.CTkSwitch(self, text="G value", command=self.switcher, variable=self.switch_var_g, onvalue='2', offvalue='0')
+        self.switch_var_g = customtkinter.StringVar(value = 'G')
+        self.switch_g = customtkinter.CTkSwitch(self, text="G value", command=self.switcher, variable=self.switch_var_g, onvalue='G', offvalue='0')
         self.switch_g.grid(row=1, column=0, padx=10, pady=(10, 0), sticky="w")
-        self.switch_var_b = customtkinter.StringVar(value = '3')
-        self.switch_b = customtkinter.CTkSwitch(self, text="B value", command=self.switcher, variable=self.switch_var_b, onvalue='3', offvalue='0')
+        self.switch_var_b = customtkinter.StringVar(value = 'B')
+        self.switch_b = customtkinter.CTkSwitch(self, text="B value", command=self.switcher, variable=self.switch_var_b, onvalue='B', offvalue='0')
         self.switch_b.grid(row=2, column=0, padx=10, pady=(10, 0), sticky="w")
-        self.switch_var_c = customtkinter.StringVar(value = '4')
-        self.switch_c = customtkinter.CTkSwitch(self, text="C value", command=self.switcher, variable=self.switch_var_c, onvalue='4', offvalue='0')
+        self.switch_var_c = customtkinter.StringVar(value = 'C')
+        self.switch_c = customtkinter.CTkSwitch(self, text="C value", command=self.switcher, variable=self.switch_var_c, onvalue='C', offvalue='0')
         self.switch_c.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="w")
 
         self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.save_data, hover = True)
@@ -64,18 +70,6 @@ class RGBC_switch(customtkinter.CTkFrame):
                 ls_sensor_readings.append(switch_status)
         status.SensorDataSelect = ls_sensor_readings
         print(status.SensorDataSelect)
-
-    def get(self):
-        ls_sensor_readings = []
-        if self.switch_r.get() == 1:
-            ls_sensor_readings.append(self.switch_r.cget("text"))
-        if self.switch_g.get() == 1:
-            ls_sensor_readings.append(self.switch_g.cget("text"))
-        if self.switch_b.get() == 1:
-            ls_sensor_readings.append(self.switch_b.cget("text"))
-        if self.switch_c.get() == 1:
-            ls_sensor_readings.append(self.switch_c.cget("text"))
-        return ls_sensor_readings
     
     def show_warning(self):
     # Show some retry/cancel warnings
@@ -163,7 +157,7 @@ class Chameleon_window(customtkinter.CTkFrame):
 
         self.new_window = None
 
-        self.button_Arduino_config = customtkinter.CTkButton(self, text="Arduino Configuration", command=Configure_Arduino)
+        self.button_Arduino_config = customtkinter.CTkButton(self, text="Arduino Configuration", command=self.ArduinoConfiguration)
         self.button_Arduino_config.grid(row=0, column=0, padx=10, pady=(10,0), sticky="ew")
 
         self.button_file = customtkinter.CTkButton(self, text="select file", command=self.selectfile)
@@ -179,41 +173,11 @@ class Chameleon_window(customtkinter.CTkFrame):
                                                         values=["A: test bench", "B: car", "C"])
         self.optionmenu_TestBench.grid(row=3, column=0, padx=10, pady=(0, 10))
 
-        self.label_KohConc = customtkinter.CTkLabel(self, text="Input the KOH concentration", anchor="w")
-        self.label_KohConc.grid(row=4, column=0, padx=10, pady=(10, 0), sticky="nsew")
-
-        self.optionmenu_KohConc = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
-                                                        values=["g/100mL", "g/25mL", "M", "wt%"])
-        self.optionmenu_KohConc.grid(row=5, column=0, padx=10, pady=(0, 10))
-
-        self.entry_KohConc = customtkinter.CTkEntry(self, placeholder_text="KOH concentration")
-        self.entry_KohConc.grid(row=5, column=1, columnspan=2, padx=(20, 0), pady=(0, 10), sticky="nsew")
-
-        self.label_DexConc = customtkinter.CTkLabel(self, text="Input the Dextrose concentration", anchor="w")
-        self.label_DexConc.grid(row=6, column=0, padx=10, pady=(10, 0), sticky="nsew")
-
-        self.optionmenu_DexConc = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
-                                                        values=["g/100mL", "g/25mL", "M", "wt%"])
-        self.optionmenu_DexConc.grid(row=7, column=0, padx=10, pady=(0, 10))
-
-        self.entry_DexConc = customtkinter.CTkEntry(self, placeholder_text="Dex concentration")
-        self.entry_DexConc.grid(row=7, column=1, columnspan=2, padx=(20, 0), pady=(0, 10), sticky="nsew")
-
-        self.label_Kmno4Conc = customtkinter.CTkLabel(self, text="Input the KMnO\u2084 concentration", anchor="w")
-        self.label_Kmno4Conc.grid(row=8, column=0, padx=10, pady=(10, 0), sticky="nsew")
-
-        self.optionmenu_Kmno4Conc = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
-                                                        values=["g/500mL", "g/100mL", "g/25mL", "M", "wt%"])
-        self.optionmenu_Kmno4Conc.grid(row=9, column=0, padx=10, pady=(0, 20))
-
-        self.entry_Kmno4Conc = customtkinter.CTkEntry(self, placeholder_text="KMnO\u2084 concentration")
-        self.entry_Kmno4Conc.grid(row=9, column=1, columnspan=2, padx=(20, 0), pady=(0, 20), sticky="nsew")
-
-        self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.RunReaction, hover = True)
+        self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.RunReaction, hover = True, state='disabled')
         self.button_run.grid(row=10, column=0, columnspan=3, rowspan=2, padx=10, pady=5, sticky="ew")
         self.grid_rowconfigure(11, weight=1)
 
-        self.button_showresult = customtkinter.CTkButton(self, text="REGISTER CHEMICAL", command=None, hover = True, state='disabled')
+        self.button_showresult = customtkinter.CTkButton(self, text="REGISTER CHEMICAL", command=chemicals, hover = True, state='normal')
         self.button_showresult.grid(row=12, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=self.StopReaction, hover = True)
@@ -221,6 +185,20 @@ class Chameleon_window(customtkinter.CTkFrame):
 
         self.button_reset = customtkinter.CTkButton(self, text="RESET", command=self.Reset, hover = True)
         self.button_reset.grid(row=15, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+
+    def ArduinoConfiguration(self):
+        self.Configure_window = Configure_Arduino()
+        # print(status.Arduino_connection)
+        # print(Configure_window.winfo_exists())
+        thread2 = threading.Thread(target=self.check_connection)
+        thread2.start() 
+
+    def check_connection(self):
+        while self.Configure_window.winfo_exists():
+            time.sleep(0.1)
+            
+        if status.Arduino_connection == True:
+            self.button_run.configure(state = 'normal')
 
     def RunReaction(self):
         Arduino.execute('s')
@@ -362,7 +340,7 @@ class App(customtkinter.CTk):
 
         self.title("(REACTOR) Real-time Experiment Analysis Control and Tracking for Optimization and Records")
         
-        self.geometry("800x600")
+        self.geometry("750x550")
         # self.grid_columnconfigure(0, weight=1)
         # self.grid_columnconfigure(1, weight=1)
         # self.grid_columnconfigure(2, weight=1)

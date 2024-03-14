@@ -9,6 +9,7 @@ import pandas as pd
 import queue
 import time
 from Graphic import Plotting
+import Stopping
 
 class OutputProcess():
     def __init__(self, SensorReadingQueue):
@@ -45,6 +46,8 @@ class OutputProcess():
                 self.result_box.insert('end', '\n')
                 self.result_box.see('end')
 
+                Diff = Stopping.default()
+
             self.graph.update()
 
             if self.auto == False:
@@ -69,20 +72,20 @@ class OutputProcess():
         plt.ylim(0,2500)
         self.bg = self.fig.canvas.copy_from_bbox(self.fig.bbox)
 
-    def GraphicDraw(self, data):
-        # if data.empty:
-        #     global Output
-        #     data = Output
-        # print(data)
-        if not data.empty():
-            x = data.Time.iloc[-1]
-            y = data.C.iloc[-1]
-            dot, = self.ax.plot(x, y,'.', color = 'lightblue', markersize = 10)
-            # dot, = ax.plot(float(result.time), int(result.cur_avg),'.', color = 'lightgreen', markersize = 5)
-            self.ax.draw_artist(dot)
-            self.fig.canvas.blit(self.fig.bbox)
-        else:
-            print('No data to be plotted')
+    # def GraphicDraw(self, data):
+    #     # if data.empty:
+    #     #     global Output
+    #     #     data = Output
+    #     # print(data)
+    #     if not data.empty():
+    #         x = data.Time.iloc[-1]
+    #         y = data.C.iloc[-1]
+    #         dot, = self.ax.plot(x, y,'.', color = 'lightblue', markersize = 10)
+    #         # dot, = ax.plot(float(result.time), int(result.cur_avg),'.', color = 'lightgreen', markersize = 5)
+    #         self.ax.draw_artist(dot)
+    #         self.fig.canvas.blit(self.fig.bbox)
+    #     else:
+    #         print('No data to be plotted')
 
     def GraphicAuto(self):
         # self.GraphicOutput_Setup()

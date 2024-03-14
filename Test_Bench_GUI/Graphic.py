@@ -4,6 +4,7 @@ import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore
 import queue
 import pandas as pd
+from Global_var import status
 
 # For testing
 import threading
@@ -18,7 +19,7 @@ class Plotting():
         
         self.win = pg.GraphicsLayoutWidget(show=True, title='Chameleon: Sensor Reading')
         self.win.resize(600,400)
-        self.win.setBackground('#ADD8E6')
+        self.win.setBackground('#EFE0B9')
 
         # Enable antialiasing for prettier plots
         # pg.setConfigOptions(antialias=True)
@@ -29,7 +30,11 @@ class Plotting():
         self.p1.getAxis('left').setPen('black')
         self.p1.getAxis('left').setTextPen('black')
         self.p1.showGrid(x=True, y=True)
-        self.curve = self.p1.plot(pen='y', symbol='o', symbolBrush='y', symbolSize=10)
+        self.p1.addLegend()
+        self.curve = self.p1.plot(pen='y', symbol='o', symbolBrush='c', symbolSize=10)
+
+        for column in status.SensorDataSelect:
+            self.p1.plot(x = [0], y = [0],  pen='y', name = column, symbol='o', symbolBrush=status.colourdict[column], symbolSize=5)
 
         # pg.exec()
 
@@ -40,9 +45,12 @@ class Plotting():
         data = self.OutputQueue.get()
         # print(data)
         if isinstance(data, pd.DataFrame):
-            x_value = data.Time.iloc[-1]
-            y_value = data.C.iloc[-1]
-            self.p1.plot(x = [x_value], y = [y_value], pen='y', symbol='o', symbolBrush='r', symbolSize=5)
+            if len(status.SensorDataSelect) > 0:
+                for column in status.SensorDataSelect:
+                    x_value = data.Time.iloc[-1]
+                    y_value = data[column].iloc[-1]
+                    self.p1.plot(x = [x_value], y = [y_value],  pen='y', symbol='o', symbolBrush=status.colourdict[column], symbolSize=5)
+                    
 
 
 # ### For testing

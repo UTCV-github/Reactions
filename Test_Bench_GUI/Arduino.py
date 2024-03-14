@@ -12,7 +12,7 @@ class Arduino():
         pass
 
     def execute(command):
-        if status == False:
+        if status.Arduino_connection == False:
             msg = CTkMessagebox(title="Connection ERROR", message="Arduino is not connected", icon="warning", option_1="OK")
         elif command not in ["s", "t"]:
             msg = CTkMessagebox(title="Command ERROR", message="The command cannot be interpreted", icon="warning", option_1="OK")
