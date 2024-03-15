@@ -22,5 +22,7 @@ def default():
 
                     if diff == 0:
                         if status.stopping_trigger == True:
-                            msg = CTkMessagebox(title="End point", message=msg_display, option_1="OK")
+                            if status.msgtrigger == False:
+                                msg = CTkMessagebox(title="End point", message=msg_display, option_1="OK")
+                                status.msgtrigger = True
     return diff

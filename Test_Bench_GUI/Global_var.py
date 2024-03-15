@@ -9,3 +9,4 @@ class status():
         self.SensorDataSelect = ['R', 'G', 'B', 'C'] # Used to store what data (rgbc) to be read from the sensor
         self.colourdict = {}
         self.stopping_trigger = False
+        self.msgtrigger = False

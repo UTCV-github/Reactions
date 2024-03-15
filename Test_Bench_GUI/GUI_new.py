@@ -38,6 +38,7 @@ status.TestMode = False
 status.SensorDataSelect = ['R', 'G', 'B', 'C']
 status.colourdict = {'R':'#EB3B36', 'G':'#18F02B', 'B':'#5877EA', 'C':'#F08D33'}
 status.stopping_trigger = False
+status.msgtrigger = False
 
 Output = pd.DataFrame()
 # Output_previous = pd.DataFrame()
