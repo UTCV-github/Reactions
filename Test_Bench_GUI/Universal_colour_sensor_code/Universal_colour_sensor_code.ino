@@ -117,8 +117,8 @@ if(Serial.available()){
         // t: Stops the car and measurement, including timers
         currentTime = millis();
         timeDiff = currentTime - startTime;
-        Serial.print("Time (Interrupt): "); Serial.print(timeDiff/1000, DEC);
-        Serial.println(" ");
+        // Serial.print("Time (Interrupt): "); Serial.print(timeDiff/1000, DEC);
+        // Serial.println(" ");
         // Car motor initialization
         digitalWrite(car_motor_fwd, LOW);
         digitalWrite(car_motor_rev, LOW);

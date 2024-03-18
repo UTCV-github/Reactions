@@ -25,7 +25,9 @@ from Output import OutputProcess
 from Arduino import Arduino
 from Result import result
 from Graphic import Plotting
-from Register import chemicals
+from Register import ChemicalRegister
+from Register import ChemicalSelection
+from Register import SolutionSelected
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -39,6 +41,9 @@ status.SensorDataSelect = ['R', 'G', 'B', 'C']
 status.colourdict = {'R':'#EB3B36', 'G':'#18F02B', 'B':'#5877EA', 'C':'#F08D33'}
 status.stopping_trigger = False
 status.msgtrigger = False
+status.LegendTrigger = True
+status.ChemicalSelected = ['Bottle ID: NA', 'KOH conc: NA', 'Dex conc: NA', 'KMnO\u2084 conc: NA']
+status.ChemicalSelectedNew = ['Bottle ID: NA', 'KOH conc: NA', 'Dex conc: NA', 'KMnO\u2084 conc: NA']
 
 Output = pd.DataFrame()
 # Output_previous = pd.DataFrame()
@@ -60,8 +65,8 @@ class RGBC_switch(customtkinter.CTkFrame):
         self.switch_c = customtkinter.CTkSwitch(self, text="C value", command=self.switcher, variable=self.switch_var_c, onvalue='C', offvalue='0')
         self.switch_c.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="w")
 
-        self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.save_data, hover = True)
-        self.button_save.grid(row=8, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        # self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.save_data, hover = True)
+        # self.button_save.grid(row=8, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
     def switcher(self):
         ls_sensor_readings = []
@@ -89,7 +94,13 @@ class RGBC_switch(customtkinter.CTkFrame):
             os.makedirs('Saved_data', exist_ok=True)
             now = datetime.now()
             date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
-            file_name =  os.path.dirname(__file__) + "/Saved_data/Cache_" + date_time + ".csv"
+
+            filename_prefix = 'Cache' # Default prefix
+            if 'Bottle ID: ' in status.ChemicalSelected[0]:
+                if status.ChemicalSelected[0] != 'Bottle ID: NA':
+                    filename_prefix = status.ChemicalSelected[0].split(': ')[1]
+
+            file_name =  os.path.dirname(__file__) + "/Saved_data/" + filename_prefix + "_" + date_time + ".csv"
             result.Output_save.to_csv(file_name, index = False)
             if os.path.exists(file_name):
                 self.save_msg()
@@ -139,6 +150,7 @@ class MB_window(customtkinter.CTkFrame):
         self.button_reset = customtkinter.CTkButton(self, text="RESET", command=self.show_warning, hover = True)
         self.button_reset.grid(row=9, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
+
     def show_warning(self):
     # Show some retry/cancel warnings
         msg = CTkMessagebox(title="Sensor Error", message="Colour sensor cannot be detected!",
@@ -148,7 +160,7 @@ class MB_window(customtkinter.CTkFrame):
             self.show_warning()
 
     def selectfile(self):
-        filename = filedialog.askopenfilename()
+        filename = filedialog.askdirectory()
         print(filename)
 
 
@@ -161,11 +173,11 @@ class Chameleon_window(customtkinter.CTkFrame):
         self.button_Arduino_config = customtkinter.CTkButton(self, text="Arduino Configuration", command=self.ArduinoConfiguration)
         self.button_Arduino_config.grid(row=0, column=0, padx=10, pady=(10,0), sticky="ew")
 
-        self.button_file = customtkinter.CTkButton(self, text="select file", command=self.selectfile)
+        self.button_file = customtkinter.CTkButton(self, text="Select Folder", command=self.selectfolder)
         self.button_file.grid(row=1, column=0, padx=10, pady=(10,0), sticky="ew")
 
-        self.entry_file = customtkinter.CTkEntry(self, placeholder_text="Save data file at ...")
-        self.entry_file.grid(row=1, column=1, columnspan=2, padx=(10, 0), pady=(10, 0), sticky="nsew")
+        self.entry_folder = customtkinter.CTkEntry(self, placeholder_text="Save data file at ...")
+        self.entry_folder.grid(row=1, column=1, columnspan=2, padx=(10, 0), pady=(10, 0), sticky="nsew")
 
         self.label_TestBench = customtkinter.CTkLabel(self, text="Select a test bench", anchor="w")
         self.label_TestBench.grid(row=2, column=0, padx=10, pady=(10, 0), sticky="nsew")
@@ -174,23 +186,30 @@ class Chameleon_window(customtkinter.CTkFrame):
                                                         values=["A: test bench", "B: car", "C"])
         self.optionmenu_TestBench.grid(row=3, column=0, padx=10, pady=(0, 10))
 
-        self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.RunReaction, hover = True, state='disabled')
+        self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.RunReaction, hover = True, state='disabled', fg_color="Red")
         self.button_run.grid(row=10, column=0, columnspan=3, rowspan=2, padx=10, pady=5, sticky="ew")
         self.grid_rowconfigure(11, weight=1)
 
-        self.button_showresult = customtkinter.CTkButton(self, text="REGISTER CHEMICAL", command=chemicals, hover = True, state='normal')
+        self.button_showresult = customtkinter.CTkButton(self, text="REGISTER CHEMICAL", command=ChemicalRegister, hover = True, state='normal')
         self.button_showresult.grid(row=12, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
-        self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=self.StopReaction, hover = True)
+        self.button_showresult = customtkinter.CTkButton(self, text="SELECT CHEMICAL", command=self.ChemicalSelection, hover = True, state='normal')
+        self.button_showresult.grid(row=13, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+
+        self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=self.StopReaction, hover = True, fg_color="orange")
         self.button_pause.grid(row=14, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.button_reset = customtkinter.CTkButton(self, text="RESET", command=self.Reset, hover = True)
         self.button_reset.grid(row=15, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
+        self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.save_data, hover = True, fg_color="green")
+        self.button_save.grid(row=16, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+
+        self.SolutionSelected_1 = SolutionSelected(self)
+        self.SolutionSelected_1.grid(row=18, column=0, columnspan=2, padx=10, pady=(10, 10), sticky="nsw")
+
     def ArduinoConfiguration(self):
         self.Configure_window = Configure_Arduino()
-        # print(status.Arduino_connection)
-        # print(Configure_window.winfo_exists())
         thread2 = threading.Thread(target=self.check_connection)
         thread2.start() 
 
@@ -198,12 +217,30 @@ class Chameleon_window(customtkinter.CTkFrame):
         while self.Configure_window.winfo_exists():
             time.sleep(0.1)
             
-        if status.Arduino_connection == True:
-            self.button_run.configure(state = 'normal')
+            if status.Arduino_connection == True:
+                self.button_run.configure(state = 'normal')
+                self.button_run.configure(fg_color="green")
+
+    def ChemicalSelection(self):
+        self.SelectionWindow = ChemicalSelection()
+        thread3 = threading.Thread(target=self.CheckChemical)
+        thread3.start() 
+
+    def CheckChemical(self):
+        while self.SelectionWindow.winfo_exists():
+            time.sleep(0.1)
+            if status.ChemicalSelected != status.ChemicalSelectedNew:
+                self.SolutionSelected_1.label_SolID.configure(text=status.ChemicalSelectedNew[0])
+                self.SolutionSelected_1.label_KOH_conc.configure(text=status.ChemicalSelectedNew[1])
+                self.SolutionSelected_1.label_Dex_conc.configure(text=status.ChemicalSelectedNew[2])
+                self.SolutionSelected_1.label_KMnO4_conc.configure(text=status.ChemicalSelectedNew[3])
+
+                status.ChemicalSelected = status.ChemicalSelectedNew
 
     def RunReaction(self):
         Arduino.execute('s')
-        self.button_run.configure(state = 'disabled')
+        status.LegendTrigger = True # Reset the legend trigger
+        self.button_run.configure(state = 'disabled', fg_color="red")
         result.Output_list = []
         self.outputWindow()
 
@@ -218,15 +255,60 @@ class Chameleon_window(customtkinter.CTkFrame):
 
     def outputWindow(self):
         SensorReadingQueue = queue.Queue()
-        self.new_window = OutputProcess(SensorReadingQueue)
+        self.new_window = OutputProcess(SensorReadingQueue, 'chameleon')
         self.new_window.auto_log_on()
 
-    def selectfile(self):
-        filename = filedialog.askopenfilename()
-        print(filename)
-
     def Reset(self):
-        self.button_run.configure(state = 'normal')
+        self.button_run.configure(state = 'normal', fg_color="green")
+
+    def selectfolder(self):
+        self.folderpath = filedialog.askdirectory()
+        self.entry_folder.delete(0, 'end')
+        self.entry_folder.insert('end', self.folderpath)
+        print(self.folderpath)
+
+    def save_data(self):
+        if not result.Output_save.empty:
+            self.folderpath = self.entry_folder.get()
+
+            # if no folder was selcted
+            if self.folderpath == '': 
+                self.folderpath = os.path.dirname(__file__) + "/Saved_data"
+                os.makedirs(self.folderpath, exist_ok=True)
+            
+            # Check if the folder path is legit
+            if os.path.isdir(self.folderpath):
+                now = datetime.now()
+                date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
+
+                filename_prefix = 'Cache' # Default prefix
+                if 'Bottle ID: ' in status.ChemicalSelected[0]:
+                    if status.ChemicalSelected[0] != 'Bottle ID: NA':
+                        filename_prefix = status.ChemicalSelected[0].split(': ')[1]
+
+                file_name =  os.path.dirname(__file__) + "/Saved_data/" + filename_prefix + "_" + date_time + ".csv"
+                result.Output_save.to_csv(file_name, index = False)
+
+                if os.path.exists(file_name):
+                    self.save_msg()
+            else:
+                msg_displayed = "Folder path:" + self.folderpath + "does not exist"
+                msg = CTkMessagebox(title="System Error", message = msg_displayed, icon="warning", option_1="OK")
+
+        else:
+            self.save_warning()
+
+    def save_warning(self):
+    # Show some retry/cancel warnings
+        msg = CTkMessagebox(title="System Error", message="No data to be saved!",
+                    icon="warning", option_1="Cancel", option_2="Retry")
+    
+        if msg.get()=="Retry":
+            self.save_warning()
+
+    def save_msg(self):
+        msg = CTkMessagebox(title="Data Saved", message="Data successfully saved!",
+                    icon="check", option_1="OK")
 
 class Testing_window(customtkinter.CTkFrame):
     def __init__(self, master):
@@ -406,6 +488,8 @@ class App(customtkinter.CTk):
         self.switch_frame_2 = RGBC_switch(self.Chameleon_frame)
         self.switch_frame_2.grid(row=0, column=3, padx=10, pady=(10, 0), sticky="nsw")
 
+        
+
         # create testing frame
         self.testing_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.testing_frame.grid_columnconfigure(0, weight=1)
@@ -457,20 +541,7 @@ class App(customtkinter.CTk):
         self.select_frame_by_name("testing")
 
     def frame_setting_button_event(self):
-        self.select_frame_by_name("setting")    
-
-
-    # def show_warning(self):
-    # # Show some retry/cancel warnings
-    #     msg = CTkMessagebox(title="Sensor Error", message="Colour sensor cannot be detected!",
-    #                 icon="warning", option_1="Cancel", option_2="Retry")
-    
-    #     if msg.get()=="Retry":
-    #         App.show_warning(self)
-
-    # def selectfile(self):
-    #     filename = filedialog.askopenfilename()
-    #     print(filename)
+        self.select_frame_by_name("setting") 
 
 app = App()
 app.mainloop()

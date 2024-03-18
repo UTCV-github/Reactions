@@ -12,10 +12,11 @@ from Graphic import Plotting
 import Stopping
 
 class OutputProcess():
-    def __init__(self, SensorReadingQueue):
+    def __init__(self, SensorReadingQueue, reactions):
         self.output = pd.DataFrame()
         self.auto = None
         self.OutputQueue = SensorReadingQueue
+        self.reactions = reactions
 
     # Start a new thread to process the Arduino output so the main window won't be stuck
     def auto_log_thread(self):
@@ -37,6 +38,7 @@ class OutputProcess():
         self.graph = Plotting(self.OutputQueue)
 
     def auto_log(self):
+
         while self.auto:
             self.output = Arduino.read_output()
             if not self.output.empty:
@@ -46,7 +48,7 @@ class OutputProcess():
                 self.result_box.insert('end', '\n')
                 self.result_box.see('end')
 
-                Diff = Stopping.default()
+                Diff = Stopping.Algorithm(self.reactions)
 
             self.graph.update()
 
@@ -64,48 +66,6 @@ class OutputProcess():
         # self.auto_log_on()
         self.auto = False    
 
-    def GraphicOutput_Setup(self):
-        plt.ion()
-        self.fig, self.ax = plt.subplots()
-        plt.xlabel("Time (s)")
-        plt.ylabel("C value")
-        plt.ylim(0,2500)
-        self.bg = self.fig.canvas.copy_from_bbox(self.fig.bbox)
-
-    # def GraphicDraw(self, data):
-    #     # if data.empty:
-    #     #     global Output
-    #     #     data = Output
-    #     # print(data)
-    #     if not data.empty():
-    #         x = data.Time.iloc[-1]
-    #         y = data.C.iloc[-1]
-    #         dot, = self.ax.plot(x, y,'.', color = 'lightblue', markersize = 10)
-    #         # dot, = ax.plot(float(result.time), int(result.cur_avg),'.', color = 'lightgreen', markersize = 5)
-    #         self.ax.draw_artist(dot)
-    #         self.fig.canvas.blit(self.fig.bbox)
-    #     else:
-    #         print('No data to be plotted')
-
-    def GraphicAuto(self):
-        # self.GraphicOutput_Setup()
-        print('self.auto is', self.auto)
-        while self.auto: 
-            try:
-                print('getting data...')
-                self.lock.acquire()
-                data = self.OutputQueue.get()
-                print(data)
-                self.lock.release()
-                # self.GraphicDraw(data)
-            except self.OutputQueue.empty():
-                print('pass')
-                pass
-
-            if self.auto == False and self.OutputQueue.empty(): # Make sure the data in the queue is all plotted
-                print('break')
-                break
-
     def SendOutput(self):
         return self.output
     
@@ -113,4 +73,5 @@ class OutputProcess():
         Arduino.execute('t')
         self.auto_log_off()
         result.Output_save = pd.concat(result.Output_list)
+        Arduino.clear_buffer()
     

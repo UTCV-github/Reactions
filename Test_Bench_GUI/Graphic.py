@@ -31,27 +31,36 @@ class Plotting():
         self.p1.getAxis('left').setTextPen('black')
         self.p1.showGrid(x=True, y=True)
         self.p1.addLegend()
-        self.curve = self.p1.plot(pen='y', symbol='o', symbolBrush='c', symbolSize=10)
 
-        for column in status.SensorDataSelect:
-            self.p1.plot(x = [0], y = [0],  pen='y', name = column, symbol='o', symbolBrush=status.colourdict[column], symbolSize=5)
+        # for column in status.SensorDataSelect:
+        #     self.p1.plot(x = None, y = None,  pen='y', name = column, symbol='o', symbolBrush=status.colourdict[column], symbolSize=5)
 
         # pg.exec()
 
         self.OutputQueue = SensorReadingQueue
         self.empty = False
 
+        QtCore.qInstallMessageHandler(self.handler) # Inhibit the Qt Warning msg
+
+    # Special function to inhibit the Qt warning msg
+    def handler(self, msg_type, msg_log_context, msg_string):
+        pass
+
     def update(self):
         data = self.OutputQueue.get()
-        # print(data)
         if isinstance(data, pd.DataFrame):
             if len(status.SensorDataSelect) > 0:
-                for column in status.SensorDataSelect:
-                    x_value = data.Time.iloc[-1]
-                    y_value = data[column].iloc[-1]
-                    self.p1.plot(x = [x_value], y = [y_value],  pen='y', symbol='o', symbolBrush=status.colourdict[column], symbolSize=5)
-                    
-
+                if status.LegendTrigger == True: 
+                    for column in status.SensorDataSelect:
+                        x_value = data.Time.iloc[-1]
+                        y_value = data[column].iloc[-1]
+                        self.p1.plot(x = [x_value], y = [y_value], name = column,  pen='y', symbol='o', symbolBrush=status.colourdict[column], symbolSize=5)
+                    status.LegendTrigger = False
+                else:
+                    for column in status.SensorDataSelect:
+                        x_value = data.Time.iloc[-1]
+                        y_value = data[column].iloc[-1]
+                        self.p1.plot(x = [x_value], y = [y_value],  pen='y', symbol='o', symbolBrush=status.colourdict[column], symbolSize=5)
 
 # ### For testing
 # def test(test_Queue):

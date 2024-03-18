@@ -48,4 +48,8 @@ class Arduino():
         output_line = output_line[0:-5] # remove " \n\r" at the end of the string
 
         return output_line 
+
+    def clear_buffer():
+        ser = status.ser
+        ser.reset_output_buffer()
     
