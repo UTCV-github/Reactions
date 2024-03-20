@@ -31,6 +31,8 @@ class Plotting():
         self.p1.getAxis('left').setTextPen('black')
         self.p1.showGrid(x=True, y=True)
         self.p1.addLegend()
+        self.p1.setXRange(0,60)
+        self.p1.setYRange(0,5000)
 
         # for column in status.SensorDataSelect:
         #     self.p1.plot(x = None, y = None,  pen='y', name = column, symbol='o', symbolBrush=status.colourdict[column], symbolSize=5)

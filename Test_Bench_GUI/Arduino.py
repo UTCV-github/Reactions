@@ -30,7 +30,10 @@ class Arduino():
         output_dict = {output_line_split[i]: output_line_split[i + 1] for i in range(0, len(output_line_split), 2)}
         desired_keys = ['R', 'G', 'B', 'C', 'Time']
         filtered_dict = {key: [float(value)] for key, value in output_dict.items() if key in desired_keys}
+        _time = float(filtered_dict['Time'][0])
+        filtered_dict['Time'] = float("{:.3f}".format(_time))
         df = pd.DataFrame(filtered_dict)
+        # print(df)
         # if output_type == "df": 
         #     return df
         

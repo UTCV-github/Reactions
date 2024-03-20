@@ -65,6 +65,9 @@ class RGBC_switch(customtkinter.CTkFrame):
         self.switch_c = customtkinter.CTkSwitch(self, text="C value", command=self.switcher, variable=self.switch_var_c, onvalue='C', offvalue='0')
         self.switch_c.grid(row=3, column=0, padx=10, pady=(10, 0), sticky="w")
 
+        self.switch_b.toggle()
+        self.switch_g.toggle()
+
         # self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.save_data, hover = True)
         # self.button_save.grid(row=8, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
@@ -75,7 +78,6 @@ class RGBC_switch(customtkinter.CTkFrame):
             if i.get() != '0':
                 ls_sensor_readings.append(switch_status)
         status.SensorDataSelect = ls_sensor_readings
-        print(status.SensorDataSelect)
     
     def show_warning(self):
     # Show some retry/cancel warnings

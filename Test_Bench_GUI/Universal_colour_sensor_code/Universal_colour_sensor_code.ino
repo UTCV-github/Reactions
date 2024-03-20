@@ -230,21 +230,21 @@ if(Started){
     Serial.print("G:"); Serial.print(g, DEC); Serial.print(", ");
     Serial.print("B:"); Serial.print(b, DEC); Serial.print(", ");
     Serial.print("C:"); Serial.print(c, DEC); Serial.print(", ");
-    Serial.print("cur_avg:"); Serial.print(cur_avg, DEC); Serial.print(", ");
-    Serial.print("prev_avg:"); Serial.print(prev_avg, DEC); Serial.print(", ");
-    Serial.print("read_idx:"); Serial.print(read_idx, DEC); Serial.print(", ");
+    // Serial.print("cur_avg:"); Serial.print(cur_avg, DEC); Serial.print(", ");
+    // Serial.print("prev_avg:"); Serial.print(prev_avg, DEC); Serial.print(", ");
+    // Serial.print("read_idx:"); Serial.print(read_idx, DEC); Serial.print(", ");
     Serial.print("Time:"); Serial.print(timeDiff/1000, DEC); Serial.print(", ");
-    Serial.print("Measured Time:"); Serial.print(measured_time/1000, DEC); Serial.print(", ");
-    Serial.print("Averages: ");
-    for (int i = 0; i < (MAX_IDX + 1); i++) {
-      Serial.print(averages[i], DEC); Serial.print("; ");
-    }
-    Serial.print(", ");
-    //Serial.print("Checking"); Serial.print((read_idx - 4) % 11, DEC); Serial.print(", ");
-    Serial.print("First Diff:"); Serial.print(first_diff, DEC); Serial.print(", ");
-    Serial.print("Larger Diff:"); Serial.print(larger_diff, DEC); Serial.print(", ");
-    Serial.print("Overallavg:"); Serial.print(overallAvg, DEC); Serial.print(", ");
-    Serial.print("Delta0:"); Serial.print((cur_avg - overallAvg), DEC); Serial.print(", ");
+    // Serial.print("Measured Time:"); Serial.print(measured_time/1000, DEC); Serial.print(", ");
+    // Serial.print("Averages: ");
+    // for (int i = 0; i < (MAX_IDX + 1); i++) {
+    //   Serial.print(averages[i], DEC); Serial.print("; ");
+    // }
+    // Serial.print(", ");
+    // //Serial.print("Checking"); Serial.print((read_idx - 4) % 11, DEC); Serial.print(", ");
+    // Serial.print("First Diff:"); Serial.print(first_diff, DEC); Serial.print(", ");
+    // Serial.print("Larger Diff:"); Serial.print(larger_diff, DEC); Serial.print(", ");
+    // Serial.print("Overallavg:"); Serial.print(overallAvg, DEC); Serial.print(", ");
+    // Serial.print("Delta0:"); Serial.print((cur_avg - overallAvg), DEC); Serial.print(", ");
 //    if (first_diff > threshold) {
 //      Serial.print("Delta reached and stopped");
 //    } else {

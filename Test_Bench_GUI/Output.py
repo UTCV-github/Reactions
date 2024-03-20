@@ -24,6 +24,8 @@ class OutputProcess():
             self.auto_log_open()
             thread1 = threading.Thread(target=self.auto_log)
             thread1.start() 
+            thread2 = threading.Thread(target=self.auto_plotting) #
+            thread2.start() #
 
     def auto_log_open(self):
         self.log_window = customtkinter.CTkToplevel()
@@ -50,11 +52,16 @@ class OutputProcess():
 
                 Diff = Stopping.Algorithm(self.reactions)
 
-            self.graph.update()
+            # self.graph.update()
 
             if self.auto == False:
                 print("Auto log paused")
                 break
+
+#
+    def auto_plotting(self):
+        while self.auto:
+            self.graph.update()
 
     def auto_log_on(self):
         self.auto = True
@@ -74,4 +81,5 @@ class OutputProcess():
         self.auto_log_off()
         result.Output_save = pd.concat(result.Output_list)
         Arduino.clear_buffer()
+        self.OutputQueue.queue.clear()
     
