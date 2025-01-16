@@ -93,6 +93,7 @@ class Configure_Arduino(customtkinter.CTkToplevel):
         else: 
             msg_popup = CTkMessagebox(title="Sensor Error", message="Colour sensor cannot be detected!", 
                                       icon="warning", option_1="OK", option_2="Retry")
+            status.Arduino_connection = True
             if msg_popup.get() == "Retry":
                 ser.close()
                 self.Connect_Arduino()

@@ -28,6 +28,7 @@ from Graphic import Plotting
 from Register import ChemicalRegister
 from Register import ChemicalSelection
 from Register import SolutionSelected
+from InventoryWindow import *
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -329,8 +330,8 @@ class Testing_window(customtkinter.CTkFrame):
         self.read_line = customtkinter.CTkButton(self, text="READ", command=self.write_output)
         self.read_line.grid(row=2, column=1, padx=10, pady=(10, 0), sticky="nsew")
 
-        self.LogData_win = customtkinter.CTkButton(self, text="LOG WINDOW", command=self.auto_log_open)
-        self.LogData_win.grid(row=3, column=1, padx=10, pady=(10, 0), sticky="nsew")
+        # self.LogData_win = customtkinter.CTkButton(self, text="LOG WINDOW", command=self.auto_log_open)
+        # self.LogData_win.grid(row=3, column=1, padx=10, pady=(10, 0), sticky="nsew")
 
         self.LogData = customtkinter.CTkButton(self, text="AUTO LOG ON", command=self.auto_log_on)
         self.LogData.grid(row=4, column=1, padx=10, pady=(10, 0), sticky="nsew")
@@ -371,7 +372,7 @@ class Testing_window(customtkinter.CTkFrame):
             print("test")
 
             while self.auto:
-                output = Arduino.read_output()
+                output = Arduino.read_output_raw()
                 self.result_box.insert('end', output)
                 self.result_box.insert('end', '\n')
                 self.result_box.see('end')
@@ -435,7 +436,7 @@ class App(customtkinter.CTk):
         # create navigation frame
         self.navigation_frame = customtkinter.CTkFrame(self, corner_radius=0)
         self.navigation_frame.grid(row=0, column=0, sticky="nsew")
-        self.navigation_frame.grid_rowconfigure(5, weight=1)
+        self.navigation_frame.grid_rowconfigure(6, weight=1)
 
         self.logo_image = customtkinter.CTkImage(light_image=Image.open(os.path.join(image_path, "logo__UTCV_banner(black)[20210912].png")),
                                                  dark_image=Image.open(os.path.join(image_path, "logo__UTCV_banner(white)[20210912].png")), size=(152, 36))
@@ -445,6 +446,8 @@ class App(customtkinter.CTk):
                                                    dark_image=Image.open(os.path.join(image_path, "Testing logo (white).png")), size=(26, 26))
         self.setting_logo = customtkinter.CTkImage(Image.open(os.path.join(image_path, "Setting logo.png")), size=(26, 26))
         self.ResultTable_logo = customtkinter.CTkImage(Image.open(os.path.join(image_path, "result_table.ico")), size=(26, 26))
+        self.inventory_logo = customtkinter.CTkImage(light_image=Image.open(os.path.join(image_path, "inventory.png")),
+                                                   dark_image=Image.open(os.path.join(image_path, "inventory (Dark Mode).png")), size=(26, 26))
 
         self.navigation_frame_label = customtkinter.CTkLabel(self.navigation_frame, text=None, image=self.logo_image,
                                                              compound="left", font=customtkinter.CTkFont(size=15, weight="bold"))
@@ -465,10 +468,15 @@ class App(customtkinter.CTk):
                                                       image=self.testing_logo, anchor="w", command=self.frame_3_button_event)
         self.frame_3_button.grid(row=3, column=0, sticky="ew")
 
+        self.frame_inventory_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=5, height=40, border_spacing=10, text="Inventory",
+                                                      fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
+                                                      image=self.inventory_logo, anchor="w", command=self.frame_inventory_button_event)
+        self.frame_inventory_button.grid(row=4, column=0, sticky="ew")
+
         self.frame_setting_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=5, height=40, border_spacing=10, text="Settings",
                                                       fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                       image=self.setting_logo, anchor="w", command=self.frame_setting_button_event)
-        self.frame_setting_button.grid(row=4, column=0, sticky="ew")
+        self.frame_setting_button.grid(row=5, column=0, sticky="ew")
 
         # create MB frame (Frame_1)
         self.MB_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -490,14 +498,18 @@ class App(customtkinter.CTk):
         self.switch_frame_2 = RGBC_switch(self.Chameleon_frame)
         self.switch_frame_2.grid(row=0, column=3, padx=10, pady=(10, 0), sticky="nsw")
 
-        
-
         # create testing frame
         self.testing_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.testing_frame.grid_columnconfigure(0, weight=1)
 
         self.testing = Testing_window(self.testing_frame)
         self.testing.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsw")
+
+        # create inventory frame
+        self.inventory_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+
+        self.inventory = Inventory_window(self.inventory_frame)
+        self.inventory.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsw")
 
         # create setting frame
         self.setting_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -513,6 +525,7 @@ class App(customtkinter.CTk):
         self.frame_1_button.configure(fg_color=("gray75", "gray25") if name == "MB" else "transparent")
         self.frame_2_button.configure(fg_color=("gray75", "gray25") if name == "Chameleon" else "transparent")
         self.frame_3_button.configure(fg_color=("gray75", "gray25") if name == "testing" else "transparent")
+        self.frame_inventory_button.configure(fg_color=("gray75", "gray25") if name == "inventory" else "transparent")
         self.frame_setting_button.configure(fg_color=("gray75", "gray25") if name == "setting" else "transparent")
 
         # show selected frame
@@ -520,14 +533,22 @@ class App(customtkinter.CTk):
             self.MB_frame.grid(row=0, column=1, sticky="nsew")
         else:
             self.MB_frame.grid_forget()
+
         if name == "Chameleon":
             self.Chameleon_frame.grid(row=0, column=1, sticky="nsew")
         else:
             self.Chameleon_frame.grid_forget()
+
         if name == "testing":
             self.testing_frame.grid(row=0, column=1, sticky="nsew")
         else:
             self.testing_frame.grid_forget()
+
+        if name == "inventory":
+            self.inventory_frame.grid(row=0, column=1, sticky="nsew")
+        else:
+            self.inventory_frame.grid_forget()
+
         if name == "setting":
             self.setting_frame.grid(row=0, column=1, sticky="nsew")
         else:
@@ -541,6 +562,9 @@ class App(customtkinter.CTk):
 
     def frame_3_button_event(self):
         self.select_frame_by_name("testing")
+
+    def frame_inventory_button_event(self):
+        self.select_frame_by_name("inventory")
 
     def frame_setting_button_event(self):
         self.select_frame_by_name("setting") 

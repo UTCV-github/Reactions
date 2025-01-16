@@ -106,7 +106,7 @@ class ChemicalRegister(customtkinter.CTkToplevel):
                 else:
                     self.register_status = True
 
-        # cConvert the unit user select into the format that the csv accepts
+        # Convert the unit user select into the format that the csv accepts
         dict_UnitConversion = {"g/500mL": 'g_500mL', "g/100mL": 'g_100mL', "g/25mL": 'g_25mL', "M": 'M', "wt%": 'wt'}
         KohUnit_save = dict_UnitConversion[KohUnit]
         DexUnit_save = dict_UnitConversion[DexUnit]
