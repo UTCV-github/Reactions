@@ -148,6 +148,7 @@ void loop() {
         pressed_down = false;
         waiting = false;
         logging = !logging; // Control if the button is to start/stop recording
+        i = 0; // Reset the counter for initial red frequency values
       }
     }
   }
