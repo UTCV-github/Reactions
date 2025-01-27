@@ -3,3 +3,5 @@
 *.csv
 *.json
 .DS_Store
+Test_Bench_GUI/test.ipynb
+/Test_Bench_GUI/Saved_data

@@ -29,6 +29,8 @@ from Register import ChemicalRegister
 from Register import ChemicalSelection
 from Register import SolutionSelected
 from InventoryWindow import *
+from Chameleon_TCS34725 import Chameleon_TCS34725_window
+from Chameleon_TCS3200 import Chameleon_TCS3200_window
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -45,6 +47,7 @@ status.msgtrigger = False
 status.LegendTrigger = True
 status.ChemicalSelected = ['Bottle ID: NA', 'KOH conc: NA', 'Dex conc: NA', 'KMnO\u2084 conc: NA']
 status.ChemicalSelectedNew = ['Bottle ID: NA', 'KOH conc: NA', 'Dex conc: NA', 'KMnO\u2084 conc: NA']
+status.folderpath = ''
 
 Output = pd.DataFrame()
 # Output_previous = pd.DataFrame()
@@ -166,153 +169,6 @@ class MB_window(customtkinter.CTkFrame):
         filename = filedialog.askdirectory()
         print(filename)
 
-
-class Chameleon_window(customtkinter.CTkFrame):
-    def __init__(self, master):
-        super().__init__(master)
-
-        self.new_window = None
-
-        self.button_Arduino_config = customtkinter.CTkButton(self, text="Arduino Configuration", command=self.ArduinoConfiguration)
-        self.button_Arduino_config.grid(row=0, column=0, padx=10, pady=(10,0), sticky="ew")
-
-        self.button_file = customtkinter.CTkButton(self, text="Select Folder", command=self.selectfolder)
-        self.button_file.grid(row=1, column=0, padx=10, pady=(10,0), sticky="ew")
-
-        self.entry_folder = customtkinter.CTkEntry(self, placeholder_text="Save data file at ...")
-        self.entry_folder.grid(row=1, column=1, columnspan=2, padx=(10, 0), pady=(10, 0), sticky="nsew")
-
-        self.label_TestBench = customtkinter.CTkLabel(self, text="Select a test bench", anchor="w")
-        self.label_TestBench.grid(row=2, column=0, padx=10, pady=(10, 0), sticky="nsew")
-
-        self.optionmenu_TestBench = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
-                                                        values=["A: test bench", "B: car", "C"])
-        self.optionmenu_TestBench.grid(row=3, column=0, padx=10, pady=(0, 10))
-
-        self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.RunReaction, hover = True, state='disabled', fg_color="Red")
-        self.button_run.grid(row=10, column=0, columnspan=3, rowspan=2, padx=10, pady=5, sticky="ew")
-        self.grid_rowconfigure(11, weight=1)
-
-        self.button_showresult = customtkinter.CTkButton(self, text="REGISTER CHEMICAL", command=ChemicalRegister, hover = True, state='normal')
-        self.button_showresult.grid(row=12, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
-
-        self.button_showresult = customtkinter.CTkButton(self, text="SELECT CHEMICAL", command=self.ChemicalSelection, hover = True, state='normal')
-        self.button_showresult.grid(row=13, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
-
-        self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=self.StopReaction, hover = True, fg_color="orange")
-        self.button_pause.grid(row=14, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
-
-        self.button_reset = customtkinter.CTkButton(self, text="RESET", command=self.Reset, hover = True)
-        self.button_reset.grid(row=15, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
-
-        self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.save_data, hover = True, fg_color="green")
-        self.button_save.grid(row=16, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
-
-        self.SolutionSelected_1 = SolutionSelected(self)
-        self.SolutionSelected_1.grid(row=18, column=0, columnspan=2, padx=10, pady=(10, 10), sticky="nsw")
-
-    def ArduinoConfiguration(self):
-        self.Configure_window = Configure_Arduino()
-        thread2 = threading.Thread(target=self.check_connection)
-        thread2.start() 
-
-    def check_connection(self):
-        while self.Configure_window.winfo_exists():
-            time.sleep(0.1)
-            
-            if status.Arduino_connection == True:
-                self.button_run.configure(state = 'normal')
-                self.button_run.configure(fg_color="green")
-
-    def ChemicalSelection(self):
-        self.SelectionWindow = ChemicalSelection()
-        thread3 = threading.Thread(target=self.CheckChemical)
-        thread3.start() 
-
-    def CheckChemical(self):
-        while self.SelectionWindow.winfo_exists():
-            time.sleep(0.1)
-            if status.ChemicalSelected != status.ChemicalSelectedNew:
-                self.SolutionSelected_1.label_SolID.configure(text=status.ChemicalSelectedNew[0])
-                self.SolutionSelected_1.label_KOH_conc.configure(text=status.ChemicalSelectedNew[1])
-                self.SolutionSelected_1.label_Dex_conc.configure(text=status.ChemicalSelectedNew[2])
-                self.SolutionSelected_1.label_KMnO4_conc.configure(text=status.ChemicalSelectedNew[3])
-
-                status.ChemicalSelected = status.ChemicalSelectedNew
-
-    def RunReaction(self):
-        Arduino.execute('s')
-        status.LegendTrigger = True # Reset the legend trigger
-        self.button_run.configure(state = 'disabled', fg_color="red")
-        result.Output_list = []
-        self.outputWindow()
-
-    def StopReaction(self):
-        Arduino.execute('t')
-        self.button_run.configure(state = 'normal')
-        try:
-            self.new_window.auto_log_off()
-            result.Output_save = pd.concat(result.Output_list)
-        except self.new_window == None:
-            pass
-
-    def outputWindow(self):
-        SensorReadingQueue = queue.Queue()
-        self.new_window = OutputProcess(SensorReadingQueue, 'chameleon')
-        self.new_window.auto_log_on()
-
-    def Reset(self):
-        self.button_run.configure(state = 'normal', fg_color="green")
-
-    def selectfolder(self):
-        self.folderpath = filedialog.askdirectory()
-        self.entry_folder.delete(0, 'end')
-        self.entry_folder.insert('end', self.folderpath)
-        print(self.folderpath)
-
-    def save_data(self):
-        if not result.Output_save.empty:
-            self.folderpath = self.entry_folder.get()
-
-            # if no folder was selcted
-            if self.folderpath == '': 
-                self.folderpath = os.path.dirname(__file__) + "/Saved_data"
-                os.makedirs(self.folderpath, exist_ok=True)
-            
-            # Check if the folder path is legit
-            if os.path.isdir(self.folderpath):
-                now = datetime.now()
-                date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
-
-                filename_prefix = 'Cache' # Default prefix
-                if 'Bottle ID: ' in status.ChemicalSelected[0]:
-                    if status.ChemicalSelected[0] != 'Bottle ID: NA':
-                        filename_prefix = status.ChemicalSelected[0].split(': ')[1]
-
-                file_name =  os.path.dirname(__file__) + "/Saved_data/" + filename_prefix + "_" + date_time + ".csv"
-                result.Output_save.to_csv(file_name, index = False)
-
-                if os.path.exists(file_name):
-                    self.save_msg()
-            else:
-                msg_displayed = "Folder path:" + self.folderpath + "does not exist"
-                msg = CTkMessagebox(title="System Error", message = msg_displayed, icon="warning", option_1="OK")
-
-        else:
-            self.save_warning()
-
-    def save_warning(self):
-    # Show some retry/cancel warnings
-        msg = CTkMessagebox(title="System Error", message="No data to be saved!",
-                    icon="warning", option_1="Cancel", option_2="Retry")
-    
-        if msg.get()=="Retry":
-            self.save_warning()
-
-    def save_msg(self):
-        msg = CTkMessagebox(title="Data Saved", message="Data successfully saved!",
-                    icon="check", option_1="OK")
-
 class Testing_window(customtkinter.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
@@ -333,10 +189,10 @@ class Testing_window(customtkinter.CTkFrame):
         # self.LogData_win = customtkinter.CTkButton(self, text="LOG WINDOW", command=self.auto_log_open)
         # self.LogData_win.grid(row=3, column=1, padx=10, pady=(10, 0), sticky="nsew")
 
-        self.LogData = customtkinter.CTkButton(self, text="AUTO LOG ON", command=self.auto_log_on)
+        self.LogData = customtkinter.CTkButton(self, text="AUTO LOG ON", command=self.auto_log_on, state='normal')
         self.LogData.grid(row=4, column=1, padx=10, pady=(10, 0), sticky="nsew")
 
-        self.LogData_Off = customtkinter.CTkButton(self, text="AUTO LOG OFF", command=self.auto_log_off)
+        self.LogData_Off = customtkinter.CTkButton(self, text="AUTO LOG OFF", command=self.auto_log_off, state='normal')
         self.LogData_Off.grid(row=5, column=1, padx=10, pady=(10, 0), sticky="nsew")
 
     def send_command(self):
@@ -365,6 +221,8 @@ class Testing_window(customtkinter.CTkFrame):
         self.log_window.geometry("550x350")
         self.result_box = customtkinter.CTkTextbox(self.log_window, width=500, height=300, corner_radius=5)
         self.result_box.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
+        self.save_data_Button = customtkinter.CTkButton(self.log_window, text="SAVE", command=self.save_data)
+        self.save_data_Button.grid(row=1, column=0, padx=10, pady=(10, 0), sticky="nsew")
 
     def auto_log(self):
         if status.Arduino_connection:
@@ -373,19 +231,55 @@ class Testing_window(customtkinter.CTkFrame):
 
             while self.auto:
                 output = Arduino.read_output_raw()
-                self.result_box.insert('end', output)
-                self.result_box.insert('end', '\n')
-                self.result_box.see('end')
+                if output != '':
+                    self.result_box.insert('end', output)
+                    self.result_box.insert('end', '\n')
+                    self.result_box.see('end')
                 if self.auto == False:
                     break
 
     def auto_log_on(self):
         self.auto = True
         self.auto_log_thread()
+        self.LogData.configure(state = 'disabled', fg_color="red")
 
     def auto_log_off(self):
         # self.auto_log_on()
         self.auto = False
+        self.LogData.configure(state = 'normal', fg_color="#3B8ED0")
+
+    def save_data(self):
+        if self.result_box != '':
+
+            # if no folder was selcted
+            if status.folderpath == '': 
+                status.folderpath = os.path.join(os.path.dirname(__file__), "Saved_data")
+                os.makedirs(status.folderpath, exist_ok=True)
+            
+            print(status.folderpath)
+
+            # Check if the folder path is legit
+            if os.path.isdir(status.folderpath):
+                now = datetime.now()
+                date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
+
+                filename_prefix = 'Cache' # Default prefix
+                if 'Bottle ID: ' in status.ChemicalSelected[0]:
+                    if status.ChemicalSelected[0] != 'Bottle ID: NA':
+                        filename_prefix = status.ChemicalSelected[0].split(': ')[1]
+
+                file_name =  os.path.dirname(__file__) + "/Saved_data/" + filename_prefix + "_" + date_time + ".txt"
+                # Writing to a file
+                with open(file_name, 'w') as file:
+                    text_to_save = self.result_box.get(0.0, 'end')
+                    file.write(text_to_save)
+
+                msg = CTkMessagebox(title="Data Saved", message = 'Data has saved at ' + file_name, icon="check", option_1="OK")
+
+            else:
+                msg_displayed = "Folder path:" + status.folderpath + " does not exist"
+                msg = CTkMessagebox(title="System Error", message = msg_displayed, icon="warning", option_1="OK")
+
 
 class Setting_window(customtkinter.CTkFrame):
     def __init__(self, master):
@@ -458,25 +352,30 @@ class App(customtkinter.CTk):
                                                    image=self.MB_logo, anchor="w", command=self.frame_1_button_event)
         self.frame_1_button.grid(row=1, column=0, sticky="ew")
 
-        self.frame_2_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=5, height=40, border_spacing=10, text="Chameleon",
+        self.frame_2_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=5, height=40, border_spacing=10, text="Chameleon 24",
                                                       fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                       image=self.Chameleon_logo, anchor="w", command=self.frame_2_button_event)
         self.frame_2_button.grid(row=2, column=0, sticky="ew")
 
+        self.frame_2_1_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=5, height=40, border_spacing=10, text="Chameleon 25",
+                                                      fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
+                                                      image=self.Chameleon_logo, anchor="w", command=self.frame_2_1_button_event)
+        self.frame_2_1_button.grid(row=3, column=0, sticky="ew")
+
         self.frame_3_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=5, height=40, border_spacing=10, text="Testing",
                                                       fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                       image=self.testing_logo, anchor="w", command=self.frame_3_button_event)
-        self.frame_3_button.grid(row=3, column=0, sticky="ew")
+        self.frame_3_button.grid(row=4, column=0, sticky="ew")
 
         self.frame_inventory_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=5, height=40, border_spacing=10, text="Inventory",
                                                       fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                       image=self.inventory_logo, anchor="w", command=self.frame_inventory_button_event)
-        self.frame_inventory_button.grid(row=4, column=0, sticky="ew")
+        self.frame_inventory_button.grid(row=5, column=0, sticky="ew")
 
         self.frame_setting_button = customtkinter.CTkButton(self.navigation_frame, corner_radius=5, height=40, border_spacing=10, text="Settings",
                                                       fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
                                                       image=self.setting_logo, anchor="w", command=self.frame_setting_button_event)
-        self.frame_setting_button.grid(row=5, column=0, sticky="ew")
+        self.frame_setting_button.grid(row=6, column=0, sticky="ew")
 
         # create MB frame (Frame_1)
         self.MB_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -489,14 +388,21 @@ class App(customtkinter.CTk):
         self.window = MB_window(self.MB_frame)
         self.window.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsw")
 
-        # create Chameleon frame
+        # create Chameleon frame (TCS34725)
         self.Chameleon_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
 
-        self.Chameleon = Chameleon_window(self.Chameleon_frame)
+        self.Chameleon = Chameleon_TCS34725_window(self.Chameleon_frame)
         self.Chameleon.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsw")
 
         self.switch_frame_2 = RGBC_switch(self.Chameleon_frame)
         self.switch_frame_2.grid(row=0, column=3, padx=10, pady=(10, 0), sticky="nsw")
+
+        # create Chameleon frame (TCS3200)
+        self.Chameleon_frame_2 = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
+        self.Chameleon_frame_2.grid_columnconfigure(0, weight=1)
+
+        self.Chameleon_2 = Chameleon_TCS3200_window(self.Chameleon_frame_2)
+        self.Chameleon_2.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsw")     
 
         # create testing frame
         self.testing_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
@@ -518,12 +424,13 @@ class App(customtkinter.CTk):
         self.setting.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsw")
 
         # select default frame
-        self.select_frame_by_name("Chameleon")
+        self.select_frame_by_name("Chameleon 25")
 
     def select_frame_by_name(self, name):
         # set button color for selected button
         self.frame_1_button.configure(fg_color=("gray75", "gray25") if name == "MB" else "transparent")
-        self.frame_2_button.configure(fg_color=("gray75", "gray25") if name == "Chameleon" else "transparent")
+        self.frame_2_button.configure(fg_color=("gray75", "gray25") if name == "Chameleon 24" else "transparent")
+        self.frame_2_1_button.configure(fg_color=("gray75", "gray25") if name == "Chameleon 25" else "transparent")
         self.frame_3_button.configure(fg_color=("gray75", "gray25") if name == "testing" else "transparent")
         self.frame_inventory_button.configure(fg_color=("gray75", "gray25") if name == "inventory" else "transparent")
         self.frame_setting_button.configure(fg_color=("gray75", "gray25") if name == "setting" else "transparent")
@@ -534,10 +441,15 @@ class App(customtkinter.CTk):
         else:
             self.MB_frame.grid_forget()
 
-        if name == "Chameleon":
+        if name == "Chameleon 24":
             self.Chameleon_frame.grid(row=0, column=1, sticky="nsew")
         else:
             self.Chameleon_frame.grid_forget()
+
+        if name == "Chameleon 25":
+            self.Chameleon_frame_2.grid(row=0, column=1, sticky="nsew")
+        else:
+            self.Chameleon_frame_2.grid_forget()
 
         if name == "testing":
             self.testing_frame.grid(row=0, column=1, sticky="nsew")
@@ -558,7 +470,10 @@ class App(customtkinter.CTk):
         self.select_frame_by_name("MB")
 
     def frame_2_button_event(self):
-        self.select_frame_by_name("Chameleon")
+        self.select_frame_by_name("Chameleon 24")
+
+    def frame_2_1_button_event(self):
+        self.select_frame_by_name("Chameleon 25")
 
     def frame_3_button_event(self):
         self.select_frame_by_name("testing")

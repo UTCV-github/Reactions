@@ -47,8 +47,8 @@ class Arduino():
     def read_output_raw():
         ser = status.ser
         output_line = ser.readline()
-        output_line = output_line.decode("utf-8")
-        output_line = output_line[0:-5] # remove " \n\r" at the end of the string
+        output_line = output_line.decode("utf-8").strip()
+        # output_line = output_line[0:-4] # remove "\n\r" at the end of the string
 
         return output_line 
 

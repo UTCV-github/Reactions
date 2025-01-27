@@ -13,3 +13,4 @@ class status():
         self.LegendTrigger = True # Indicator of whether the first data point has been plotted (so that legend can be displayed)
         self.ChemicalSelected = ['Bottle ID: NA', 'KOH conc: NA', 'Dex conc: NA', 'KMnO\u2084 conc: NA']
         self.ChemicalSelectedNew = ['Bottle ID: NA', 'KOH conc: NA', 'Dex conc: NA', 'KMnO\u2084 conc: NA']
+        self.folderpath = ''

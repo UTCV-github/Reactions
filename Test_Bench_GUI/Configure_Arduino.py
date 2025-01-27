@@ -76,24 +76,34 @@ class Configure_Arduino(customtkinter.CTkToplevel):
         if self.COM_input.get() != '':
             COM_port = self.COM_input.get()
 
-        ser = serial.Serial(COM_port, Baud, timeout=1)
-        # serial.Serial('COM10', 9600, timeout=1)
-        status.ser = ser
-        time.sleep(1) # Pause for 1 sencond to wait for response from the Arduino
+        try:
+            ser = serial.Serial(COM_port, Baud, timeout=1)
+            # serial.Serial('COM10', 9600, timeout=1)
+            status.ser = ser
+            time.sleep(1) # Pause for 1 sencond to wait for response from the Arduino
 
-        # Detect if the sensor is connected properly
-        msg = ser.readline()
-        print(msg)
-        if msg.decode('utf-8').rstrip() == 'Found sensor':
-            msg_popup = CTkMessagebox(title="Found sensor", message="Colour sensor detected!", 
-                                      icon="check", option_1="OK")
-            status.Arduino_connection = True    # Change global variable
-            status.Arduino_connection_real = True
+            # Detect if the sensor is connected properly
+            msg = ser.readline()
+            print(msg)
+            if msg.decode('utf-8').rstrip() == 'Found sensor':
+                msg_popup = CTkMessagebox(title="Found sensor", message="Colour sensor TCS34725 detected!", 
+                                        icon="check", option_1="OK")
+                status.Arduino_connection = True    # Change global variable
+                status.Arduino_connection_real = True
+            elif msg.decode('utf-8').rstrip() == 'Checking for TCS3200 color sensor...':
+                msg_popup = CTkMessagebox(title="Found sensor", message="Arduino is loaded with code for Colour sensor TCS3200!", 
+                                        icon="check", option_1="OK")
+                status.Arduino_connection = True    # Change global variable
+                status.Arduino_connection_real = True
 
-        else: 
-            msg_popup = CTkMessagebox(title="Sensor Error", message="Colour sensor cannot be detected!", 
-                                      icon="warning", option_1="OK", option_2="Retry")
-            status.Arduino_connection = True
-            if msg_popup.get() == "Retry":
-                ser.close()
-                self.Connect_Arduino()
+            else: 
+                msg_popup = CTkMessagebox(title="Sensor Error", message="Colour sensor cannot be detected!", 
+                                        icon="warning", option_1="OK", option_2="Retry")
+                status.Arduino_connection = True
+                if msg_popup.get() == "Retry":
+                    ser.close()
+                    self.Connect_Arduino()
+
+        except serial.SerialException as e: 
+            msg_popup = CTkMessagebox(title="COM Configuration Error", message=f"{e}; Please quit all apps connecting to Arduino Board (i.e. Arduino IDE)", 
+                                        icon="warning", option_1="OK")
