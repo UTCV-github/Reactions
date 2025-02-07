@@ -317,6 +317,8 @@ class SolutionSelected(customtkinter.CTkFrame):
 
          
 if __name__ == '__main__':
+    status.TestBenchNum = 'A'
+
     root = customtkinter.CTk()
 
     TestButton = customtkinter.CTkButton(root, text="ChemicalRegister", command=ChemicalRegister)

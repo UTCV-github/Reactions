@@ -58,4 +58,5 @@ class FTPCommunication():
             # Upload the modified CSV file
             ftp.storbinary('STOR ' + filename, BytesIO(csv_data.encode()))
         
-        msg = CTkMessagebox(title="FTP message", message = 'Chemical list updated!', icon="check", option_1="OK")
+        if df.equals(self.ftp_to_dataframe(hostname, username, password, filename)):
+            msg = CTkMessagebox(title="FTP message", message = 'Chemical list updated!', icon="check", option_1="OK")

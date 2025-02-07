@@ -48,6 +48,7 @@ status.LegendTrigger = True
 status.ChemicalSelected = ['Bottle ID: NA', 'KOH conc: NA', 'Dex conc: NA', 'KMnO\u2084 conc: NA']
 status.ChemicalSelectedNew = ['Bottle ID: NA', 'KOH conc: NA', 'Dex conc: NA', 'KMnO\u2084 conc: NA']
 status.folderpath = ''
+status.TestBenchNum = 'A'
 
 Output = pd.DataFrame()
 # Output_previous = pd.DataFrame()

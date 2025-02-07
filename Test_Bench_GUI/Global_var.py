@@ -14,3 +14,4 @@ class status():
         self.ChemicalSelected = ['Bottle ID: NA', 'KOH conc: NA', 'Dex conc: NA', 'KMnO\u2084 conc: NA']
         self.ChemicalSelectedNew = ['Bottle ID: NA', 'KOH conc: NA', 'Dex conc: NA', 'KMnO\u2084 conc: NA']
         self.folderpath = ''
+        self.TestBenchNum = 'A'

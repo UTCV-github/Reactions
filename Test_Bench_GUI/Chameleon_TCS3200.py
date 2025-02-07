@@ -11,6 +11,7 @@ import time
 import threading
 import queue
 import os
+import re
 
 from Configure_Arduino import Configure_Arduino
 from Global_var import status
@@ -27,8 +28,9 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
         super().__init__(master)
 
         self.new_window = None
-        self.default_filename = tk.StringVar()
-        self.default_filename.set(self.auto_filename())
+        self.filename_input = tk.StringVar()
+        self.default_filename = self.auto_filename() # Store the default name
+        self.filename_input.set(self.default_filename)
 
         self.result_box = None
 
@@ -64,7 +66,7 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
         self.button_pause.grid(row=21, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         # self.entry_filename = customtkinter.CTkEntry(self, placeholder_text=self.auto_filename(), width=300)
-        self.entry_filename = customtkinter.CTkEntry(self, textvariable=self.default_filename, width=300)
+        self.entry_filename = customtkinter.CTkEntry(self, textvariable=self.filename_input, width=300)
         self.entry_filename.grid(row=22, column=0, columnspan=2, padx=(10, 10), pady=(10, 10), sticky="nsew")
         
         self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.save_data, hover = True, fg_color="green")
@@ -98,7 +100,11 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
                 self.SolutionSelected_1.label_KMnO4_conc.configure(text=status.ChemicalSelectedNew[3])
 
                 status.ChemicalSelected = status.ChemicalSelectedNew
-                self.default_filename.set(self.auto_filename())
+                if self.entry_filename.get() == self.default_filename: # if the user did not manually change the default file name, then keep the user name, otherwise, uupdate the defualt name but keep the file name
+                    self.default_filename = self.auto_filename()
+                    self.filename_input.set(self.default_filename)
+                else:
+                    self.default_filename = self.auto_filename()
                 # self.entry_filename.configure(placeholder_text = self.auto_filename()) # Update the default text in the file name box once a chemical is selected
 
     # Start a new thread to process the Arduino output so the main window won't be stuck
@@ -163,12 +169,18 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
 
             # Check if the folder path is legit
             if os.path.isdir(status.folderpath):
-                file_name = self.auto_filename()
                 file_name_enter = self.entry_filename.get()
+
+                # Check the format of the filename in the text box
                 if file_name_enter != '':
                     if not file_name_enter.endswith(".txt"):
                         file_name_enter += ".txt"
                     file_name = file_name_enter
+
+                # Check if the name has been manually changed, if not, auto generate a new name using current time
+                if file_name_enter == self.default_filename:
+                    file_name = self.auto_filename()
+
                 file_path = os.path.join(status.folderpath, file_name)
 
                 # Writing to a file
@@ -176,7 +188,7 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
                     text_to_save = self.result_box.get(0.0, 'end')
                     file.write(text_to_save)
 
-                msg = CTkMessagebox(title="Data Saved", message = 'Data has saved at ' + file_path, icon="check", option_1="OK")
+                msg = CTkMessagebox(title="Data Saved", message = 'Data has beeen saved at ' + file_path, icon="check", option_1="OK")
 
             else:
                 msg_displayed = "Folder path:" + status.folderpath + " does not exist"
