@@ -28,6 +28,7 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
         super().__init__(master)
 
         self.new_window = None
+        self.TestBenchSelected = None
         self.filename_input = tk.StringVar()
         self.default_filename = self.auto_filename() # Store the default name
         self.filename_input.set(self.default_filename)
@@ -47,7 +48,8 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
         self.label_TestBench.grid(row=2, column=0, padx=10, pady=(20, 10), sticky="nsew")
 
         self.optionmenu_TestBench = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
-                                                        values=["Test Bench A", "Test Bench B", "Test Bench C"])
+                                                        values=["-Select Test Bench-", "Test Bench A", "Test Bench B", "Test Bench C", "Test Bench D"],
+                                                        command = self.TestBenchSelection)
         self.optionmenu_TestBench.grid(row=2, column=1, columnspan=2, padx=10, pady=(20, 10), sticky="nsew")
 
         self.button_showresult = customtkinter.CTkButton(self, text="REGISTER CHEMICAL", command=ChemicalRegister, hover = True, state='normal')
@@ -85,6 +87,11 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
                 self.button_run.configure(state = 'normal')
                 self.button_run.configure(fg_color="green")
 
+    def TestBenchSelection(self, selection):
+        self.TestBenchSelected = selection
+        self.default_filename = self.auto_filename()
+        self.filename_input.set(self.default_filename)
+
     def ChemicalSelection(self):
         self.SelectionWindow = ChemicalSelection()
         thread3 = threading.Thread(target=self.CheckChemical)
@@ -118,13 +125,12 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
         self.log_window.geometry("550x350")
         self.result_box = customtkinter.CTkTextbox(self.log_window, width=500, height=300, corner_radius=5)
         self.result_box.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
-        self.save_data_Button = customtkinter.CTkButton(self.log_window, text="SAVE", command=self.save_data)
-        self.save_data_Button.grid(row=1, column=0, padx=10, pady=(10, 20), sticky="nsew")
+        # self.save_data_Button = customtkinter.CTkButton(self.log_window, text="SAVE", command=self.save_data)
+        # self.save_data_Button.grid(row=1, column=0, padx=10, pady=(10, 20), sticky="nsew")
 
     def auto_log(self):
         if status.Arduino_connection:
             self.auto_log_open()
-            print("test")
 
             while self.auto:
                 output = Arduino.read_output_raw()
@@ -155,6 +161,16 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
         if 'Bottle ID: ' in status.ChemicalSelected[0]:
             if status.ChemicalSelected[0] != 'Bottle ID: NA':
                 filename_prefix = status.ChemicalSelected[0].split(': ')[1]
+
+        dict_TestBench = {"Test Bench A": "A",
+                          "Test Bench B": "B",
+                          "Test Bench C": "C",
+                          "Test Bench D": "D"}
+        
+        if self.TestBenchSelected in dict_TestBench:
+            filename_prefix = dict_TestBench[self.TestBenchSelected] + filename_prefix
+        else:
+            filename_prefix = "N" + filename_prefix
 
         file_name =  filename_prefix + "_" + date_time + ".txt"
 
