@@ -27,7 +27,7 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
     def __init__(self, master):
         super().__init__(master)
 
-        self.new_window = None
+        self.log_window = None
         self.TestBenchSelected = None
         self.filename_input = tk.StringVar()
         self.default_filename = self.auto_filename() # Store the default name
@@ -59,20 +59,26 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
         self.button_showresult.grid(row=13, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         self.SolutionSelected_1 = SolutionSelected(self)
-        self.SolutionSelected_1.grid(row=18, column=0, columnspan=2, padx=10, pady=(10, 10), sticky="nsw")
+        self.SolutionSelected_1.grid(row=14, column=0, columnspan=2, padx=10, pady=(10, 10), sticky="nsw")
 
-        self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.auto_log_on, hover = True, state='disabled', fg_color="Red")
-        self.button_run.grid(row=20, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        self.SerialMonitor = customtkinter.CTkButton(self, text="Serial Monitor", command=self.auto_log_on, hover = True, state='disabled', fg_color="Red")
+        self.SerialMonitor.grid(row=20, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
-        self.button_pause = customtkinter.CTkButton(self, text="PAUSE", command=self.auto_log_off, hover = True, state='disabled', fg_color="orange")
-        self.button_pause.grid(row=21, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+        self.button_run = customtkinter.CTkButton(self, text="RUN", command=self.Start, hover = True, state='disabled', fg_color="Red")
+        self.button_run.grid(row=21, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
+
+        self.button_pause = customtkinter.CTkButton(self, text="STOP", command=self.Stop, hover = True, state='disabled', fg_color="Red")
+        self.button_pause.grid(row=22, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 
         # self.entry_filename = customtkinter.CTkEntry(self, placeholder_text=self.auto_filename(), width=300)
         self.entry_filename = customtkinter.CTkEntry(self, textvariable=self.filename_input, width=300)
-        self.entry_filename.grid(row=22, column=0, columnspan=2, padx=(10, 10), pady=(10, 10), sticky="nsew")
+        self.entry_filename.grid(row=23, column=0, columnspan=2, padx=(10, 10), pady=(5, 5), sticky="nsew")
         
-        self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.save_data, hover = True, fg_color="green")
-        self.button_save.grid(row=22, column=2, columnspan=1, padx=10, pady=(10, 10), sticky="ew")
+        self.button_DefaultName = customtkinter.CTkButton(self, text="Default Name", command=self.default_name, hover = True)
+        self.button_DefaultName.grid(row=23, column=2, columnspan=1, padx=10, pady=(5, 5), sticky="ew")
+
+        self.button_save = customtkinter.CTkButton(self, text="SAVE", command=self.save_data, hover = True)
+        self.button_save.grid(row=24, column=0, columnspan=3, padx=10, pady=(0, 5), sticky="ew")
 
     def ArduinoConfiguration(self):
         self.Configure_window = Configure_Arduino()
@@ -84,13 +90,21 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
             time.sleep(0.1)
             
             if status.Arduino_connection == True:
+                self.button_pause.configure(state = 'normal')
+                self.button_pause.configure(fg_color="#3B8ED0")
                 self.button_run.configure(state = 'normal')
-                self.button_run.configure(fg_color="green")
+                self.button_run.configure(fg_color="#3B8ED0")
+                self.SerialMonitor.configure(state = 'normal')
+                self.SerialMonitor.configure(fg_color="#3B8ED0")
 
     def TestBenchSelection(self, selection):
         self.TestBenchSelected = selection
-        self.default_filename = self.auto_filename()
-        self.filename_input.set(self.default_filename)
+
+        if self.entry_filename.get() == self.default_filename: # if the user did not manually change the default file name, then keep the user name, otherwise, uupdate the defualt name but keep the file name
+            self.default_filename = self.auto_filename()
+            self.filename_input.set(self.default_filename)
+        else:
+            self.default_filename = self.auto_filename()
 
     def ChemicalSelection(self):
         self.SelectionWindow = ChemicalSelection()
@@ -121,12 +135,22 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
 
     def auto_log_open(self):
         self.log_window = customtkinter.CTkToplevel()
-        self.log_window.title("Arduino readings")
-        self.log_window.geometry("550x350")
+        self.log_window.title("Serial Monitor")
+        self.log_window.geometry("550x355")
         self.result_box = customtkinter.CTkTextbox(self.log_window, width=500, height=300, corner_radius=5)
         self.result_box.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
-        # self.save_data_Button = customtkinter.CTkButton(self.log_window, text="SAVE", command=self.save_data)
-        # self.save_data_Button.grid(row=1, column=0, padx=10, pady=(10, 20), sticky="nsew")
+        self.button_clear_text = customtkinter.CTkButton(self.log_window, text="CLEAR", command=self.clear_text)
+        self.button_clear_text.grid(row=1, column=0, padx=10, pady=(10, 20), sticky="nsew")
+        self.log_window.protocol("WM_DELETE_WINDOW", self.log_window_close)
+        self.log_window.focus()
+
+    def clear_text(self):
+        self.result_box.delete(0.0, 'end')
+
+    def log_window_close(self):
+        print("Subwindow is closing")
+        self.auto_log_off()
+        self.log_window.destroy()
 
     def auto_log(self):
         if status.Arduino_connection:
@@ -144,14 +168,34 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
     def auto_log_on(self):
         self.auto = True
         self.auto_log_thread()
-        self.button_run.configure(state = 'disabled', fg_color="red")
+        self.SerialMonitor.configure(state = 'disabled', fg_color="red")
+        self.button_run.configure(state = 'normal', fg_color="#3B8ED0")
         self.button_pause.configure(state = 'normal', fg_color="#3B8ED0")
 
     def auto_log_off(self):
         # self.auto_log_on()
         self.auto = False
-        self.button_run.configure(state = 'normal', fg_color="#3B8ED0")
+        self.SerialMonitor.configure(state = 'normal', fg_color="#3B8ED0")
+        self.button_run.configure(state = 'disabled', fg_color="red")
         self.button_pause.configure(state = 'disabled', fg_color="red")
+
+    def Send_command(self, command):
+        if self.log_window == None or not self.log_window.winfo_exists():
+            msg = CTkMessagebox(title="System Error", message = 'Serial Monitor is not open', icon="warning", option_1="OK")
+        else:
+            Arduino.execute(command)
+    
+    def Start(self):
+        self.Send_command('s')
+        self.button_run.configure(state = 'disabled', fg_color="red")
+
+    def Stop(self):
+        self.Send_command('t')
+        self.button_run.configure(state = 'normal', fg_color="#3B8ED0")
+
+    def default_name(self):
+        self.default_filename = self.auto_filename()
+        self.filename_input.set(self.default_filename)
 
     def auto_filename(self):
         now = datetime.now()
@@ -165,7 +209,8 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
         dict_TestBench = {"Test Bench A": "A",
                           "Test Bench B": "B",
                           "Test Bench C": "C",
-                          "Test Bench D": "D"}
+                          "Test Bench D": "D",
+                          "-Select Test Bench-": "N"}
         
         if self.TestBenchSelected in dict_TestBench:
             filename_prefix = dict_TestBench[self.TestBenchSelected] + filename_prefix

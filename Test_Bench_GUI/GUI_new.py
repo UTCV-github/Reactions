@@ -321,7 +321,7 @@ class App(customtkinter.CTk):
 
         self.title("(REACTOR) Real-time Experiment Analysis Control and Tracking for Optimization and Records")
         
-        self.geometry("750x550")
+        self.geometry("750x580")
         # self.grid_columnconfigure(0, weight=1)
         # self.grid_columnconfigure(1, weight=1)
         # self.grid_columnconfigure(2, weight=1)
