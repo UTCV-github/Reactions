@@ -10,6 +10,8 @@ import json
 import os
 import datetime
 import random
+from pathlib import Path
+import re
 
 from FTPBackup import FTPCommunication
 from Global_var import status
@@ -19,7 +21,8 @@ class ChemicalRegister(customtkinter.CTkToplevel):
         super().__init__()
 
         self.register_status = False # Check if all requirent is met before uploading to ftp server
-        self.config_path = 'Config/Config.json'
+        self.script_dir = Path(__file__).parent
+        self.config_path = os.path.join(self.script_dir, "Config", "Config.json")
 
         if os.path.exists(self.config_path):
             with open(self.config_path, "r") as json_file:
@@ -28,7 +31,6 @@ class ChemicalRegister(customtkinter.CTkToplevel):
             self.hostname = data['hostname']
             self.username = data['username']
             self.pswd = data['password']
-            self.group = data['group']
             self.FileName = data['file name']
 
         else: 
@@ -117,7 +119,7 @@ class ChemicalRegister(customtkinter.CTkToplevel):
             print('FTP: file downloaded')
 
             ls_Sol_ID_existing = df_ChemicalList['Sol_ID'].tolist()
-            sol_ID = self.group + self.SolIDGenerator(ls_Sol_ID_existing)
+            sol_ID = self.SolIDGenerator(ls_Sol_ID_existing)
 
             new_row = {'Sol_ID': [sol_ID], 
                     'KOH_conc': [KohConc], 'KOH_unit': [KohUnit_save],
@@ -135,11 +137,11 @@ class ChemicalRegister(customtkinter.CTkToplevel):
         else:
             msg = CTkMessagebox(title="FTP error", message = 'Registration filed', icon="cancel", option_1="OK")
 
-        
 
     def SolIDGenerator(self, existing_list):
         while True:
             new_ID = '{:04d}'.format(random.randint(0, 9999)) # Generate a 4-digit code randomly
+            existing_list = [int(re.sub(r"[A-Za-z]", "", item)) for item in existing_list] # Remove any letter
             if new_ID not in existing_list:
                 return new_ID
 
@@ -187,7 +189,8 @@ class ChemicalSelection(customtkinter.CTkToplevel):
         super().__init__()
 
         self.FTP = FTPCommunication()
-        self.config_path = 'Config/Config.json'
+        self.script_dir = Path(__file__).parent
+        self.config_path = os.path.join(self.script_dir, "Config", "Config.json")
 
         if os.path.exists(self.config_path):
             with open(self.config_path, "r") as json_file:
@@ -196,7 +199,6 @@ class ChemicalSelection(customtkinter.CTkToplevel):
             self.hostname = data['hostname']
             self.username = data['username']
             self.pswd = data['password']
-            self.group = data['group']
             self.FileName = data['file name']
         else: 
             msg = CTkMessagebox(title="FTP error", message = 'Cannot find FTP configuration', icon="cancel", option_1="OK")

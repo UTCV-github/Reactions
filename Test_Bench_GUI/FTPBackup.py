@@ -4,11 +4,13 @@ import json
 import os
 from CTkMessagebox import CTkMessagebox
 import pandas as pd
+from pathlib import Path
 
 class FTPCommunication():
     def __init__(self):
-
-        self.config_path = 'Config/Config.json'
+        
+        self.script_dir = Path(__file__).parent
+        self.config_path = os.path.join(self.script_dir, "Config", "Config.json")
 
         if os.path.exists(self.config_path):
             with open(self.config_path, "r") as json_file:

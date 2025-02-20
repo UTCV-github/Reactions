@@ -33,7 +33,6 @@ const int motor = 11;
 Servo myservo; //servo motor
 bool released = false;
 bool pressed_down = false;
-bool waiting = true; 
 bool logging = false; // Alternating between T and F after every press of the button
 
 double initialRed = 0;
@@ -79,6 +78,26 @@ double PrintSensorReading(double initialRed){
     Serial.println(" ");
 
     return dRed;
+}
+
+// Button Activity
+bool ButtonPress(int button_pin, bool &logging, bool &pressed_down, bool &released, int &i) {
+    int servoButton = digitalRead(button_pin);
+
+    if (!servoButton) { // If the button is pressed down
+        pressed_down = true;
+        while (pressed_down) { // While the button is held down
+            servoButton = digitalRead(button_pin);
+            if (servoButton) { // If the button is released
+                released = true;
+                pressed_down = false;
+                logging = !logging; // Toggle logging state
+                i = 0; // Reset the counter
+                return true; // Indicate that the button was pressed and released
+            }
+        }
+    }
+    return false; // Indicate no button press action
 }
 
 void setup() {
@@ -134,25 +153,20 @@ void setup() {
 }
 
 void loop() {
+  char input = Serial.read();
+  bool Button_Pressed = ButtonPress(button, logging, pressed_down, released, i); // Check if the button is pressed
 
-/***** ADDED CODE *******/
-  //     i = min ang; i <= max ang; i ++
-  int servoButton = digitalRead(button);
-
-  if (!servoButton){ //if the button is pressed down 
-    pressed_down = true;
-    while (pressed_down){ //while the button is held down 
-      servoButton = digitalRead(button);
-      if (servoButton){ //if the button is released 
-        released = true;
-        pressed_down = false;
-        waiting = false;
-        logging = !logging; // Control if the button is to start/stop recording
-      }
-    }
+  if (input == 115){
+    logging = true;
+    i = 0; // reset counter i
   }
-    
-  if (released && logging){ //if button has been pressed and released 
+
+  if (input == 116){
+    logging = false;
+  }
+
+  // if (released && logging){ //if button has been pressed and released
+  if ((Button_Pressed && logging) || input == 115){ //if button has been pressed and released 
     Serial.println("\nREACTION REACTION REACTION");
     released = false;
 
@@ -165,18 +179,27 @@ void loop() {
       initialRed = pulseIn(sensorOut, LOW); // obtain initial red frequency values
       Serial.print("R: "); Serial.print(initialRed, DEC); Serial.println(" "); // Print out the red value
       delay(500); //Delay 0.5 sec between each reading 
-    }
 
-    newStartTime = millis(); // Obtain a new starttime
-    Serial.println("Reaction Starts Now!");
+      // Check Input/button activity
+      input = Serial.read();
+      if (input == 116){
+        logging = false;
+      }
+      
+      if (ButtonPress(button, logging, pressed_down, released, i) || input == 116){
+        delay(100);
+        break;
+      }
+
+      // If all 6 R initial reading are printted, print the start msg
+      if (i == 6){
+        newStartTime = millis(); // Obtain a new starttime
+        Serial.println("Reaction Starts Now!");
+      }
+    }
   }
 
-  else if (waiting){ //Print WAITING until button is pressed 
-      // Serial.println("\nWAITING");
-      delay(500);
-    }
-
-  else if (logging == false){ //Skip the printing part if logging is false 
+  else if ((logging == false)){ //Skip the printing part if logging is false 
       // Serial.println("\nWAITING");
       return;
     }
@@ -187,33 +210,28 @@ void loop() {
     currentTime = millis();
     timeDiff = (currentTime - newStartTime)/1000;
 
-    // // if(buttonValue == LOW){
-    // //   Serial.print("REACTION REACTION REACTION REACTION");
-    // //   Serial.println(" ");
-    // // }
-
     dRed = PrintSensorReading(initialRed);
     delay(300); // adjust how frequently you want the colours to update; decided 0.3 s was optimal
     Serial.print(dRed);
 
-  // Stopping algorithm
-  if ((dRed >= 35) && (timeDiff>20)){
-    counter += 1;
-    if (counter == 3){
-      analogWrite(motor, 0);
-      Serial.print("Reaction Over!!");
-      Serial.println(" ");
-      Serial.print("Final Time Diff:"); Serial.print(timeDiff, DEC);
-      while(true);
-    }
-  } else{ //Ensures change occurs 3 consecutive times 
-    counter = 0;
-  }
+  // // Stopping algorithm
+  // if ((dRed >= 35) && (timeDiff>20)){
+  //   counter += 1;
+  //   if (counter == 3){
+  //     analogWrite(motor, 0);
+  //     Serial.print("Reaction Over!!");
+  //     Serial.println(" ");
+  //     Serial.print("Final Time Diff:"); Serial.print(timeDiff, DEC);
+  //     while(true);
+  //   }
+  // } else{ //Ensures change occurs 3 consecutive times 
+  //   counter = 0;
+  // }
 
-  analogWrite(trans_ctrl, 255);
-  digitalWrite(LED_BUILTIN, HIGH);
+    analogWrite(trans_ctrl, 255);
+    digitalWrite(LED_BUILTIN, HIGH);
 
-  Serial.print("|| Time Diff:"); Serial.print(timeDiff, DEC);
-  Serial.println(" ");
+    Serial.print("|| Time Diff:"); Serial.print(timeDiff, DEC);
+    Serial.println(" ");
   }
 }
