@@ -7,6 +7,7 @@
 #define S1 5
 #define S2 6
 #define S3 7
+#define S4 3
 #define sensorOut 8
 #define button 13
 
@@ -34,6 +35,11 @@ Servo myservo; //servo motor
 bool released = false;
 bool pressed_down = false;
 bool logging = false; // Alternating between T and F after every press of the button
+
+const int max_angle = 120; 
+const int safe_angle = 50;
+const int servo_delay = 40;
+const int servo_interval = 10;
 
 double initialRed = 0;
 double dRed = 0;
@@ -107,6 +113,7 @@ void setup() {
   pinMode(S1, OUTPUT);
   pinMode(S2, OUTPUT);
   pinMode(S3, OUTPUT);
+  pinMode(S4, OUTPUT); // transistor ?
   
   // Setting the sensorOut as an input
   pinMode(sensorOut, INPUT);
@@ -170,6 +177,22 @@ void loop() {
     Serial.println("\nREACTION REACTION REACTION");
     released = false;
 
+    for (int i = max_angle ; i>-20 ; i -= servo_interval){
+      //i sets the degree of rotation for the servo - must change it depending on delay (speed) set
+      if(i < 0) { myservo.write(0); }
+      myservo.write(i);
+      //delays to give time to the servo to rotate -- reduce number inside to make it spin faster (controls the speed)
+      delay(servo_delay);
+    }
+    delay(servo_delay+1000);
+    digitalWrite(S4, HIGH);
+    
+    //safe angle, after the servo goes 120, goes back to 50 degrees
+    for (int i = -5 ; i<safe_angle ; i += servo_interval/2){
+      myservo.write(i); //min_angle
+      delay(servo_delay);
+    }
+    
     digitalWrite(S2,LOW);
     digitalWrite(S3,LOW);
 
