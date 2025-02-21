@@ -45,7 +45,7 @@ class ChemicalRegister(customtkinter.CTkToplevel):
         self.label_KohConc.grid(row=4, column=0, padx=10, pady=(5, 0), sticky="nsew")
 
         self.optionmenu_KohConc = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
-                                                        values=["g/100mL", "g/25mL", "M", "wt%"])
+                                                        values=["g/100mL", "g/50mL", "g/25mL", "M", "wt%"])
         self.optionmenu_KohConc.grid(row=5, column=0, padx=10, pady=(0, 10))
 
         self.entry_KohConc = customtkinter.CTkEntry(self, placeholder_text="KOH concentration")
@@ -55,7 +55,7 @@ class ChemicalRegister(customtkinter.CTkToplevel):
         self.label_DexConc.grid(row=6, column=0, padx=10, pady=(5, 0), sticky="nsew")
 
         self.optionmenu_DexConc = customtkinter.CTkOptionMenu(self, dynamic_resizing=False,
-                                                        values=["g/100mL", "g/25mL", "M", "wt%"])
+                                                        values=["g/100mL", "g/50mL", "g/25mL", "M", "wt%"])
         self.optionmenu_DexConc.grid(row=7, column=0, padx=10, pady=(0, 5))
 
         self.entry_DexConc = customtkinter.CTkEntry(self, placeholder_text="Dex concentration")
@@ -109,7 +109,7 @@ class ChemicalRegister(customtkinter.CTkToplevel):
                     self.register_status = True
 
         # Convert the unit user select into the format that the csv accepts
-        dict_UnitConversion = {"g/500mL": 'g_500mL', "g/100mL": 'g_100mL', "g/25mL": 'g_25mL', "M": 'M', "wt%": 'wt'}
+        dict_UnitConversion = {"g/500mL": 'g_500mL', "g/100mL": 'g_100mL', "g/50mL": 'g_50mL', "g/25mL": 'g_25mL', "g/10mL": 'g_10mL', "M": 'M', "wt%": 'wt'}
         KohUnit_save = dict_UnitConversion[KohUnit]
         DexUnit_save = dict_UnitConversion[DexUnit]
         KMnO4Unit_save = dict_UnitConversion[KMnO4Unit]
@@ -141,7 +141,10 @@ class ChemicalRegister(customtkinter.CTkToplevel):
     def SolIDGenerator(self, existing_list):
         while True:
             new_ID = '{:04d}'.format(random.randint(0, 9999)) # Generate a 4-digit code randomly
-            existing_list = [int(re.sub(r"[A-Za-z]", "", item)) for item in existing_list] # Remove any letter
+
+            if any(isinstance(item, str) for item in existing_list): 
+                existing_list = [int(re.sub(r"[A-Za-z]", "", item)) for item in existing_list] # Remove any letter
+
             if new_ID not in existing_list:
                 return new_ID
 
@@ -191,6 +194,7 @@ class ChemicalSelection(customtkinter.CTkToplevel):
         self.FTP = FTPCommunication()
         self.script_dir = Path(__file__).parent
         self.config_path = os.path.join(self.script_dir, "Config", "Config.json")
+        self.dict_UnitConversion_reverse = {'g_500mL': "g/500mL", 'g_100mL': "g/100mL", 'g_25mL': "g/25mL", 'M': "M", 'wt': "wt%"}
 
         if os.path.exists(self.config_path):
             with open(self.config_path, "r") as json_file:
@@ -204,21 +208,21 @@ class ChemicalSelection(customtkinter.CTkToplevel):
             msg = CTkMessagebox(title="FTP error", message = 'Cannot find FTP configuration', icon="cancel", option_1="OK")
 
         self.title("Chemical selection")
-        self.geometry("940x500")
+        self.geometry("910x500")
         self.after(10, self.lift) # Add this to keep the new window float atop
 
         self.df_raw = self.DfDownload()
         self.ls_table = self.Df2Table(self.df_raw)
-        self.HeaderContent = [['Bottle ID', 'KOH conc','Dex conc', 'KMnO\u2084 conc', 'Prepared by', 'Time']]
+        self.HeaderContent = [['Bottle ID', 'KOH conc', 'KOH unit','Dex conc', 'KMnO\u2084 conc', 'Prepared by', 'Time']]
 
-        self.header = CTkTable(self, row=1, column=6, values=self.HeaderContent, header_color='lightblue', corner_radius=0, width=145)
+        self.header = CTkTable(self, row=1, column=7, values=self.HeaderContent, header_color='lightblue', corner_radius=0, width=120)
         self.header.grid(padx=0, pady=(5,5), row=0, column=0, columnspan=3)
 
-        self.tableframe = customtkinter.CTkScrollableFrame(self, width=900, height=410)
-        self.tableframe.grid(padx=5, pady=0, row=1, column=0, columnspan=3)
+        self.tableframe = customtkinter.CTkScrollableFrame(self, width=875, height=410)
+        self.tableframe.grid(padx=(5,0), pady=0, row=1, column=0, columnspan=3)
 
-        self.table = CTkTable(self.tableframe, row=20, column=6, values=self.ls_table, corner_radius=5, pady=1, width=145)
-        self.table.grid(padx=13, pady=0, row=1, column=0, columnspan=3)
+        self.table = CTkTable(self.tableframe, row=20, column=7, values=self.ls_table, corner_radius=5, pady=1, width=120)
+        self.table.grid(padx=10, pady=0, row=1, column=0, columnspan=3)
 
         self.button_update = customtkinter.CTkButton(self, text="Update", command=self.TableUpdate)
         self.button_update.grid(row=2, column=0, padx=10, pady=(5,0), sticky="ew")
@@ -238,12 +242,12 @@ class ChemicalSelection(customtkinter.CTkToplevel):
 
     # Only used after DfDownload in the __ini__ part
     def Df2Table(self, df: pd.DataFrame):
-        df_new = df[['Sol_ID', 'KOH_conc', 'Dex_conc', 'KMnO4_conc', 'Producer', 'Time']]
+        df_new = df[['Sol_ID', 'KOH_conc', 'KOH_unit', 'Dex_conc', 'KMnO4_conc', 'Producer', 'Time']]
         return df_new.values.tolist()
 
     def TableDownload(self):
         df_new_raw = self.DfDownload()
-        df_new = df_new_raw[['Sol_ID', 'KOH_conc', 'Dex_conc', 'KMnO4_conc', 'Producer', 'Time']]
+        df_new = df_new_raw[['Sol_ID', 'KOH_conc', 'KOH_unit', 'Dex_conc', 'KMnO4_conc', 'Producer', 'Time']]
         return df_new.values.tolist() # return list
 
     def TableUpdate(self):
@@ -267,8 +271,6 @@ class ChemicalSelection(customtkinter.CTkToplevel):
             SolID = selected_row[0]
             df_SelectedRow = self.df_raw[self.df_raw['Sol_ID'] == SolID]
 
-            dict_UnitConversion_reverse = {'g_500mL': "g/500mL", 'g_100mL': "g/100mL", 'g_25mL': "g/25mL", 'M': "M", 'wt': "wt%"}
-
             SolID = df_SelectedRow['Sol_ID'].iloc[0]
             KOH_conc = df_SelectedRow['KOH_conc'].iloc[0]
             KOH_unit = df_SelectedRow['KOH_unit'].iloc[0]
@@ -278,9 +280,9 @@ class ChemicalSelection(customtkinter.CTkToplevel):
             KMnO4_unit = df_SelectedRow['KMnO4_unit'].iloc[0]
 
             SolID_complete = 'Bottle ID: ' + SolID
-            KOH_ConcUnit = 'KOH conc: ' + str(KOH_conc) + ' ' + dict_UnitConversion_reverse[KOH_unit]
-            Dex_ConcUnit = 'Dex conc: ' + str(Dex_conc) + ' ' + dict_UnitConversion_reverse[Dex_unit]
-            KMnO4_ConcUnit = 'KMnO\u2084 conc: ' + str(KMnO4_conc) + ' ' + dict_UnitConversion_reverse[KMnO4_unit]
+            KOH_ConcUnit = 'KOH conc: ' + str(KOH_conc) + ' ' + self.dict_UnitConversion_reverse[KOH_unit]
+            Dex_ConcUnit = 'Dex conc: ' + str(Dex_conc) + ' ' + self.dict_UnitConversion_reverse[Dex_unit]
+            KMnO4_ConcUnit = 'KMnO\u2084 conc: ' + str(KMnO4_conc) + ' ' + self.dict_UnitConversion_reverse[KMnO4_unit]
 
             status.ChemicalSelectedNew = [SolID_complete, KOH_ConcUnit, Dex_ConcUnit, KMnO4_ConcUnit]
 
