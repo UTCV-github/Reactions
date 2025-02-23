@@ -22,9 +22,11 @@ int clearFrequency = 0;
 int counter = 0;
 int i = 0;       // Counter variable for taking initial red reading
 
+// Timer variables
 int startTime;
 double currentTime;
 double timeDiff;
+double newStartTime = 0;
 
 const int stirrer_rot_speed = 255;
 
@@ -41,19 +43,32 @@ const int safe_angle = 50;
 const int servo_delay = 40;
 const int servo_interval = 10;
 
+// Stopping algrithm code
 double initialRed = 0;
-double dRed = 0;
-double newStartTime = 0;
+double R_reading;
+
+const int R_buffer_size = 50; // size of the buffer
+float Array_R_Values[R_buffer_size]; // Array to store 50 latest readings
+int index_R_total = 0; // Number of toal R readings recorded
+int iteration_R = 0; // Number of 50 R-reading cycle
+int index_R_array = 0; // Index in the Array_R_Values
+
+const int RAvg_buffer_size = 15; // size of the buffer
+float Array_R_Avg[RAvg_buffer_size]; // Array to store 15 latest R averages
+int index_RAvg_total = 0; // Number of toal R avg calculated
+int iteration_RAvg = 0; // Number of 15 R-Avg cycle
+int index_RAvg_array = 0; // Index in the Array_R_Avg
+int num_RAvg = 8; // Number of R avg values used when calculating the slope
+double R_Avg_slope;
 /*END*/
 
-double PrintSensorReading(double initialRed){
+double PrintSensorReading(){
   // Setting RED (R) filtered photodiodes to be read
     digitalWrite(S2,LOW);
     digitalWrite(S3,LOW);
   
     // Reading the output frequency
     redFrequency = pulseIn(sensorOut, LOW);
-    dRed = abs(redFrequency - initialRed);
     
     // Setting GREEN (G) filtered photodiodes to be read
     digitalWrite(S2,HIGH);
@@ -83,7 +98,7 @@ double PrintSensorReading(double initialRed){
     Serial.print("C: "); Serial.print(clearFrequency, DEC); Serial.print(" ");
     Serial.println(" ");
 
-    return dRed;
+    return redFrequency;
 }
 
 // Button Activity
@@ -104,6 +119,24 @@ bool ButtonPress(int button_pin, bool &logging, bool &pressed_down, bool &releas
         }
     }
     return false; // Indicate no button press action
+}
+
+// Calculate Rolling average of the R readings
+double calculateRollingAverage() {
+    double sum = 0.0;
+    for (int i = 0; i < R_buffer_size; i++) {
+        sum += Array_R_Values[i];
+    }
+    return sum / R_buffer_size;
+}
+
+double calculateMovingSlope() {
+    double sumFirst = 0.0, sumLast = 0.0;
+    for (int i = 0; i < 8; i++) {
+        sumLast += Array_R_Avg[(index_RAvg_total - i) % RAvg_buffer_size]; // The sum of last values in the rolling range
+        sumFirst += Array_R_Avg[(index_RAvg_total + 1 - RAvg_buffer_size + i) % RAvg_buffer_size]; // The sum of first values in the rolling range
+    }
+    return sumFirst - sumLast;
 }
 
 void setup() {
@@ -131,7 +164,7 @@ void setup() {
 
   // Servo code (ADDED)
   myservo.attach(servo_pin);
-  myservo.write(0); //initializes the angle to 0
+  myservo.write(max_angle); //initializes the angle to 120
   
   Serial.begin(9600);         // initialize serial
 
@@ -232,29 +265,56 @@ void loop() {
     // Timer
     currentTime = millis();
     timeDiff = (currentTime - newStartTime)/1000;
+    R_reading = PrintSensorReading();
+    
+    // Stopping algorithm ***Start***
+    double R_power = pow(R_reading, 4);
+    index_R_array = index_R_total % R_buffer_size;
+    iteration_R = index_R_total / R_buffer_size; // iteration is an int, so it gets the quotient of the division
+    Array_R_Values[index_R_array] = R_power;
+    index_R_total += 1;
 
-    dRed = PrintSensorReading(initialRed);
+    if (iteration_R > 0){
+      double R_rollingaverage = calculateRollingAverage();
+      Serial.print(R_rollingaverage);
+      Serial.print(" || ");
+      index_RAvg_array = index_RAvg_total % RAvg_buffer_size;
+      iteration_RAvg = index_RAvg_total / RAvg_buffer_size; // iteration is an int, so it gets the quotient of the division
+      Array_R_Avg[index_RAvg_array] = R_rollingaverage;
+
+      if(iteration_RAvg > 0){
+        R_Avg_slope = calculateMovingSlope();
+        Serial.print(R_Avg_slope);
+        Serial.print(" ");
+      } else{
+        Serial.print(" NA");
+      }
+
+      index_RAvg_total += 1;
+
+    } else{
+      Serial.print("NA");
+      Serial.print(" || NA");
+    }
+
+    // Change Output when the reaction reaches Endpoint
+    if (timeDiff < 50){ // No endpoint detection for the first 50 s
+      Serial.print("|| Time Diff:"); 
+    } else{
+      if (R_Avg_slope < 0){
+        Serial.print("|| Endpoint Time:"); // Reaction Endpoint
+      } else{
+        Serial.print("|| Time Diff:");
+      }
+    }
+    // Stopping algorithm ***End***
+
+    Serial.print(timeDiff, DEC);
+    Serial.println(" ");
+
     delay(300); // adjust how frequently you want the colours to update; decided 0.3 s was optimal
-    Serial.print(dRed);
-
-  // // Stopping algorithm
-  // if ((dRed >= 35) && (timeDiff>20)){
-  //   counter += 1;
-  //   if (counter == 3){
-  //     analogWrite(motor, 0);
-  //     Serial.print("Reaction Over!!");
-  //     Serial.println(" ");
-  //     Serial.print("Final Time Diff:"); Serial.print(timeDiff, DEC);
-  //     while(true);
-  //   }
-  // } else{ //Ensures change occurs 3 consecutive times 
-  //   counter = 0;
-  // }
 
     analogWrite(trans_ctrl, 255);
     digitalWrite(LED_BUILTIN, HIGH);
-
-    Serial.print("|| Time Diff:"); Serial.print(timeDiff, DEC);
-    Serial.println(" ");
   }
 }
