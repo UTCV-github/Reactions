@@ -133,19 +133,33 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
         thread1 = threading.Thread(target=self.auto_log)
         thread1.start()
 
-    def auto_log_open(self):
+    def SerialMonitorWindow(self):
+        self.Endpoint = False # Changed to be true once endpoint reached
+
         self.log_window = customtkinter.CTkToplevel()
         self.log_window.title("Serial Monitor")
-        self.log_window.geometry("550x355")
+        self.log_window.geometry("600x355")
         self.result_box = customtkinter.CTkTextbox(self.log_window, width=500, height=300, corner_radius=5)
-        self.result_box.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="nsew")
+        self.result_box.grid(row=0, column=0, rowspan=10, padx=10, pady=(10, 0), sticky="nsew")
         self.button_clear_text = customtkinter.CTkButton(self.log_window, text="CLEAR", command=self.clear_text)
-        self.button_clear_text.grid(row=1, column=0, padx=10, pady=(10, 20), sticky="nsew")
+        self.button_clear_text.grid(row=11, column=0, padx=10, pady=(10, 20), sticky="nsew")
+
+        self.text_Endpoint_header = customtkinter.CTkLabel(self.log_window, text="Endpoint:")
+        self.text_Endpoint_header.grid(row=0, column=1, padx=10, pady=(10, 20), sticky="nsew")
+        self.text_Endpoint = customtkinter.CTkLabel(self.log_window, text="NA")
+        self.text_Endpoint.grid(row=1, column=1, padx=10, pady=(10, 20), sticky="nsew")
+
+        self.text_Timer_header = customtkinter.CTkLabel(self.log_window, text="Timer:")
+        self.text_Timer_header.grid(row=2, column=1, padx=10, pady=(10, 20), sticky="nsew")
+        self.text_Timer = customtkinter.CTkLabel(self.log_window, text="0 s")
+        self.text_Timer.grid(row=3, column=1, padx=10, pady=(10, 20), sticky="nsew")
         self.log_window.protocol("WM_DELETE_WINDOW", self.log_window_close)
         self.log_window.focus()
 
     def clear_text(self):
         self.result_box.delete(0.0, 'end')
+        self.Endpoint = False
+        self.text_Endpoint.configure(text = "NA")
 
     def log_window_close(self):
         print("Subwindow is closing")
@@ -154,7 +168,7 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
 
     def auto_log(self):
         if status.Arduino_connection:
-            self.auto_log_open()
+            self.SerialMonitorWindow()
 
             while self.auto:
                 output = Arduino.read_output_raw()
@@ -162,6 +176,14 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
                     self.result_box.insert('end', output)
                     self.result_box.insert('end', '\n')
                     self.result_box.see('end')
+                if 'Time' in output:
+                    text_time = float(output.split(":")[-1])
+                    self.text_Timer.configure(text = f"{text_time:.2f}" + ' s')
+                if 'Endpoint' in output and not self.Endpoint:
+                    text_Endpoint = float(output.split(":")[-1])
+                    self.text_Endpoint.configure(text = f"{text_Endpoint:.2f}" + ' s')
+                    self.Endpoint = True
+
                 if self.auto == False:
                     break
 
