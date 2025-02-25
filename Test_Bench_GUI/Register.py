@@ -194,7 +194,7 @@ class ChemicalSelection(customtkinter.CTkToplevel):
         self.FTP = FTPCommunication()
         self.script_dir = Path(__file__).parent
         self.config_path = os.path.join(self.script_dir, "Config", "Config.json")
-        self.dict_UnitConversion_reverse = {'g_500mL': "g/500mL", 'g_100mL': "g/100mL", 'g_25mL': "g/25mL", 'M': "M", 'wt': "wt%"}
+        self.dict_UnitConversion_reverse = {'g_500mL': "g/500mL", 'g_100mL': "g/100mL", 'g_50mL': "g/50mL", 'g_25mL': "g/25mL", 'M': "M", 'wt': "wt%"}
 
         if os.path.exists(self.config_path):
             with open(self.config_path, "r") as json_file:
@@ -279,7 +279,7 @@ class ChemicalSelection(customtkinter.CTkToplevel):
             KMnO4_conc = df_SelectedRow['KMnO4_conc'].iloc[0]
             KMnO4_unit = df_SelectedRow['KMnO4_unit'].iloc[0]
 
-            SolID_complete = 'Bottle ID: ' + SolID
+            SolID_complete = 'Bottle ID: ' + str(SolID)
             KOH_ConcUnit = 'KOH conc: ' + str(KOH_conc) + ' ' + self.dict_UnitConversion_reverse[KOH_unit]
             Dex_ConcUnit = 'Dex conc: ' + str(Dex_conc) + ' ' + self.dict_UnitConversion_reverse[Dex_unit]
             KMnO4_ConcUnit = 'KMnO\u2084 conc: ' + str(KMnO4_conc) + ' ' + self.dict_UnitConversion_reverse[KMnO4_unit]
