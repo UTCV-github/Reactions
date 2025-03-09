@@ -305,13 +305,13 @@ void loop() {
       Serial.print("|| Time Diff:"); 
     } else{
       if (R_Avg_slope < 0){
-        Serial.print("|| Endpoint Time:"); Serial.print(timeDiff, DEC); // Reaction Endpoint
+        Serial.print("|| Endpoint Time:"); // Reaction Endpoint
         analogWrite(trans_ctrl, 255);
         digitalWrite(LED_BUILTIN, HIGH);
 
         analogWrite(motor, 0);
         digitalWrite(S4, LOW);
-        while(true);
+        // while(true);
       } else{
         Serial.print("|| Time Diff:");
       }
