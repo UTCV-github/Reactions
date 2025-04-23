@@ -229,30 +229,33 @@ void loop() {
     digitalWrite(S2,LOW);
     digitalWrite(S3,LOW);
 
+    newStartTime = millis(); // Obtain a new starttime
+    Serial.println("Reaction Starts Now!");
+
     // Have a 3 s delay between pressing the button and adding the starting chemical
-    while (i < 6) {
-      i++;
-      initialRed = pulseIn(sensorOut, LOW); // obtain initial red frequency values
-      Serial.print("R: "); Serial.print(initialRed, DEC); Serial.println(" "); // Print out the red value
-      delay(500); //Delay 0.5 sec between each reading 
+    // while (i < 6) {
+    //   i++;
+    //   initialRed = pulseIn(sensorOut, LOW); // obtain initial red frequency values
+    //   Serial.print("R: "); Serial.print(initialRed, DEC); Serial.println(" "); // Print out the red value
+    //   delay(500); //Delay 0.5 sec between each reading 
 
-      // Check Input/button activity
-      input = Serial.read();
-      if (input == 116){
-        logging = false;
-      }
+    //   // Check Input/button activity
+    //   input = Serial.read();
+    //   if (input == 116){
+    //     logging = false;
+    //   }
       
-      if (ButtonPress(button, logging, pressed_down, released, i) || input == 116){
-        delay(100);
-        break;
-      }
+    //   if (ButtonPress(button, logging, pressed_down, released, i) || input == 116){
+    //     delay(100);
+    //     break;
+    //   }
 
-      // If all 6 R initial reading are printted, print the start msg
-      if (i == 6){
-        newStartTime = millis(); // Obtain a new starttime
-        Serial.println("Reaction Starts Now!");
-      }
-    }
+    //   // If all 6 R initial reading are printted, print the start msg
+    //   if (i == 6){
+    //     newStartTime = millis(); // Obtain a new starttime
+    //     Serial.println("Reaction Starts Now!");
+    //   }
+    // }
   }
 
   else if ((logging == false)){ //Skip the printing part if logging is false 
@@ -298,7 +301,7 @@ void loop() {
     }
 
     // Change Output when the reaction reaches Endpoint
-    if (timeDiff < 50){ // No endpoint detection for the first 50 s
+    if (timeDiff < 40){ // No endpoint detection for the first 40 s
       Serial.print("|| Time Diff:"); 
     } else{
       if (R_Avg_slope < 0){
