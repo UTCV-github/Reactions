@@ -1,0 +1,10 @@
+CTkMessagebox==2.7
+CTkTable==1.1
+CTkTableRowSelector==1.0.1
+customtkinter==5.2.2
+matplotlib==3.8.3
+numpy==2.2.3
+pandas==2.2.3
+Pillow==11.1.0
+pyqtgraph==0.13.3
+pyserial==3.5
