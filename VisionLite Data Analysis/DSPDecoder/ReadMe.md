@@ -10,3 +10,9 @@
 - export the spectral information as Pandas dataframe.
 
 For usage tutorial, please refer to `DSPDecoder example.ipynb`
+
+## Dependencies
+
+- [numpy](https://pypi.org/project/numpy/)
+- [pandas](https://pypi.org/project/pandas/)
+- [pathlib](https://docs.python.org/3/library/pathlib.html) (standard in Python 3.4+)
