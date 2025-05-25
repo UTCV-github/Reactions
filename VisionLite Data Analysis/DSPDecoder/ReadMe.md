@@ -4,9 +4,9 @@
 
 ## Features
 
-- Parses ASCII `.dsp` files from VisionLite.
+- Parses `.dsp` files from VisionLite.
 - Extracts metadata (wavelength range, increment, etc.).
 - Loads absorbance and wavelength values into NumPy arrays.
 - export the spectral information as Pandas dataframe.
 
-For usage tutorial, please refer to 'DSPDecoder example.ipynb'
+For usage tutorial, please refer to `DSPDecoder example.ipynb`
