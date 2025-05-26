@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 
-class dsp_file:
+class dsp:
     def __init__(self, filepath: Path):
         self.filepath = filepath
         self.header = {}
