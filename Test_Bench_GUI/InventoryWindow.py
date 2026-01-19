@@ -43,7 +43,7 @@ class AddInventoryWindow(customtkinter.CTkToplevel):
     def __init__(self):
         super().__init__()
 
-        self.title("Inventory registeration")
+        self.title("Inventory registration")
         self.geometry("420x600")
         self.after(10, self.lift) # Add this to keep the new window float atop
 

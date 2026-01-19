@@ -92,10 +92,10 @@ double PrintSensorReading(){
     clearFrequency = pulseIn(sensorOut, LOW);
 
     // Print out the sensor readings
-    Serial.print("R: "); Serial.print(redFrequency, DEC); Serial.print(" ");
-    Serial.print("G: "); Serial.print(greenFrequency, DEC); Serial.print(" ");
-    Serial.print("B: "); Serial.print(blueFrequency, DEC); Serial.print(" ");
-    Serial.print("C: "); Serial.print(clearFrequency, DEC); Serial.print(" ");
+    Serial.print(redFrequency, DEC); Serial.print(",");
+    Serial.print(greenFrequency, DEC); Serial.print(",");
+    Serial.print(blueFrequency, DEC); Serial.print(",");
+    Serial.print(clearFrequency, DEC); Serial.print(",");
     Serial.println(" ");
 
     return redFrequency;
@@ -231,31 +231,6 @@ void loop() {
 
     newStartTime = millis(); // Obtain a new starttime
     Serial.println("Reaction Starts Now!");
-
-    // Have a 3 s delay between pressing the button and adding the starting chemical
-    // while (i < 6) {
-    //   i++;
-    //   initialRed = pulseIn(sensorOut, LOW); // obtain initial red frequency values
-    //   Serial.print("R: "); Serial.print(initialRed, DEC); Serial.println(" "); // Print out the red value
-    //   delay(500); //Delay 0.5 sec between each reading 
-
-    //   // Check Input/button activity
-    //   input = Serial.read();
-    //   if (input == 116){
-    //     logging = false;
-    //   }
-      
-    //   if (ButtonPress(button, logging, pressed_down, released, i) || input == 116){
-    //     delay(100);
-    //     break;
-    //   }
-
-    //   // If all 6 R initial reading are printted, print the start msg
-    //   if (i == 6){
-    //     newStartTime = millis(); // Obtain a new starttime
-    //     Serial.println("Reaction Starts Now!");
-    //   }
-    // }
   }
 
   else if ((logging == false)){ //Skip the printing part if logging is false 

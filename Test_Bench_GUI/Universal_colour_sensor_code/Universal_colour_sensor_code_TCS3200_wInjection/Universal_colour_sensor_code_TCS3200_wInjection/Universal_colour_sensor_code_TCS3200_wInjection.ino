@@ -231,7 +231,8 @@ void loop() {
     digitalWrite(S2,LOW);
     digitalWrite(S3,LOW);
 
-    // Have a 3 s delay between pressing the button and adding the starting chemical
+    // Have a 3 s delay between pressing the button and adding the starting chemical 
+    // THIS PART IS IN THE CAR CODE BUT WE DON'T USE IT. 3s delay for collecting initial R colours but this is not actually working as intended in the code. Do not change.
     // while (i < 1) {
     //   i++;
     //   initialRed = pulseIn(sensorOut, LOW); // obtain initial red frequency values
