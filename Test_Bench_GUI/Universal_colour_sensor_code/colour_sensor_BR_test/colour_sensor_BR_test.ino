@@ -244,53 +244,11 @@ void loop() {
     currentTime = millis();
     timeDiff = (currentTime - newStartTime)/1000;
     R_reading = PrintSensorReading();
-    
-    // Stopping algorithm ***Start***
-    double R_power = pow(R_reading, 4);
-    index_R_array = index_R_total % R_buffer_size;
-    iteration_R = index_R_total / R_buffer_size; // iteration is an int, so it gets the quotient of the division
-    Array_R_Values[index_R_array] = R_power;
-    index_R_total += 1;
-
-    if (iteration_R > 0){
-      double R_rollingaverage = calculateRollingAverage();
-      Serial.print(R_rollingaverage);
-      Serial.print(" || ");
-      index_RAvg_array = index_RAvg_total % RAvg_buffer_size;
-      iteration_RAvg = index_RAvg_total / RAvg_buffer_size; // iteration is an int, so it gets the quotient of the division
-      Array_R_Avg[index_RAvg_array] = R_rollingaverage;
-
-      if(iteration_RAvg > 0){
-        R_Avg_slope = calculateMovingSlope();
-        Serial.print(R_Avg_slope);
-        Serial.print(" ");
-      } else{
-        Serial.print(" NA");
-      }
-
-      index_RAvg_total += 1;
-
-    } else{
-      Serial.print("NA");
-      Serial.print(" || NA");
-    }
-
-    // Change Output when the reaction reaches Endpoint
-    if (timeDiff < 40){ // No endpoint detection for the first 40 s
-      Serial.print("|| Time Diff:"); 
-    } else{
-      if (R_Avg_slope < 0){
-        Serial.print("|| Endpoint Time:"); // Reaction Endpoint
-      } else{
-        Serial.print("|| Time Diff:");
-      }
-    }
-    // Stopping algorithm ***End***
 
     Serial.print(timeDiff, DEC);
-    Serial.println(" ");
+    Serial.print(",");
 
-    delay(300); // adjust how frequently you want the colours to update; decided 0.3 s was optimal
+    delay(100); // adjust how frequently you want the colours to update; decided 0.3 s was optimal
 
     analogWrite(trans_ctrl, 255);
     digitalWrite(LED_BUILTIN, HIGH);
