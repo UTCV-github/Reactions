@@ -179,7 +179,7 @@ class Chameleon_TCS3200_window(customtkinter.CTkFrame):
                 if 'Time' in output:
                     text_time = float(output.split(":")[-1])
                     self.text_Timer.configure(text = f"{text_time:.2f}" + ' s')
-                if 'Endpoint' in output and not self.Endpoint:
+                if 'ENDPOINT' in output.upper() and not self.Endpoint:
                     text_Endpoint = float(output.split(":")[-1])
                     self.text_Endpoint.configure(text = f"{text_Endpoint:.2f}" + ' s')
                     self.Endpoint = True
