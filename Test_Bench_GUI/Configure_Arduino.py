@@ -87,6 +87,7 @@ class Configure_Arduino(customtkinter.CTkToplevel):
             time.sleep(1) # Pause for 1 sencond to wait for response from the Arduino
 
             # Detect if the sensor is connected properly
+            ser.write(b'p') # ping the board so we get a response 
             msg = ser.readline()
             print(msg)
             if msg.decode('utf-8').rstrip() == 'Found sensor':

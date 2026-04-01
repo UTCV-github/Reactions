@@ -1,3 +1,12 @@
+// Prerequisites:
+// Install AS7341 from Arduion libraries
+// Install Board Manager Teensy MicroMod (preferences -> additional board manager urls -> https://www.pjrc.com/teensy/package_teensy_index.json)
+// Install Teensy (for Arduino IDE)
+// Install INA226_WE from library manager (used for voltage sensor)
+// Use Teensy MicroMod board (not Arduino Uno)
+// Press Progrma MAode button (BOOT on board)
+
+
 // Libraries
 #include <Servo.h>
 #include <Wire.h>
@@ -193,13 +202,18 @@ void loop() {
   bool Button_Pressed = ButtonPress(button, logging, pressed_down, released, i);  // Check if the button is pressed
 
   
-  if (input == 115) {
+  if (input == 115) { // 115 = "s"
     logging = true;
     i = 0;  // reset counter i
   }
 
-  if (input == 116) {
+  if (input == 116) { // 116 = "t"
     logging = false;
+  }
+
+  if (input == 112) { // 112 = "p"
+    // here we are just responding to ping from the python code. Respond with a confirmationcode. 
+    Serial.println("Checking for AS7341 color sensor...");
   }
 
   // if (Button_Pressed) {  //if button has been pressed and released

@@ -1,3 +1,6 @@
+# Referringto this sample code https://github.com/sparkfun/SparkFun_MicroPython_Firmware_Uploader/blob/main/setup.py to try and get this working.
+# actually no use this one https://github.com/sparkfun/MicroMod_ATP_Carrier_Board
+
 import tkinter
 import tkinter.messagebox
 import customtkinter
@@ -81,10 +84,19 @@ class Configure_Arduino(customtkinter.CTkToplevel):
             COM_port = self.COM_input.get()
 
         try:
-            ser = serial.Serial(COM_port, Baud, timeout=1)
+            ser = serial.Serial(
+                COM_port, 
+                Baud, 
+                timeout=1
+                )
             # serial.Serial('COM10', 9600, timeout=1)
             status.ser = ser
-            time.sleep(1) # Pause for 1 sencond to wait for response from the Arduino
+            time.sleep(2) # Pause for 2 seconds to wait for response from the Arduino
+
+            while True:
+                if ser.in_waiting > 0:
+                    line = ser.readline().decode('utf-8').strip()
+                    print(f"received: {line}")
 
             # Detect if the sensor is connected properly
             msg = ser.readline()
