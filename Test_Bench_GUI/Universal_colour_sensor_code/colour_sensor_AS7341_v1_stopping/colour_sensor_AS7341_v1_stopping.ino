@@ -74,7 +74,9 @@ double R_Avg_slope;
 
 double PrintSensorReading() {
   // Read all channels from the AS7341
-  if (!as7341.readAllChannels()) {
+  uint16_t readings[12]; 
+  // 415nm, 445nm, 480nm, 515nm, 555nm, 590nm, 630nm, 680nm, Clear, NIR 
+  if (!as7341.readAllChannels(readings)) {
     Serial.println("Error reading AS7341 sensor");
     return 0;
   }
@@ -87,20 +89,32 @@ double PrintSensorReading() {
   clearFrequency = as7341.getChannel(AS7341_CHANNEL_CLEAR);
 
   // Print out the sensor readings
-  Serial.print("R: ");
-  Serial.print(redFrequency, DEC);
-  Serial.print(" ");
-  Serial.print("G: ");
-  Serial.print(greenFrequency, DEC);
-  Serial.print(" ");
-  Serial.print("B: ");
-  Serial.print(blueFrequency, DEC);
-  Serial.print(" ");
-  Serial.print("C: ");
-  Serial.print(clearFrequency, DEC);
-  Serial.println(" ");
+  Serial.print(readings[0])
+  Serial.print(",")
+  Serial.print(readings[1])
+  Serial.print(",")
+  Serial.print(readings[2])
+  Serial.print(",")
+  Serial.print(readings[3])
+  Serial.print(",")
+  Serial.print(readings[4])
+  Serial.print(",")
+  Serial.print(readings[5])
+  Serial.print(",")
+  Serial.print(readings[6])
+  Serial.print(",")
+  Serial.print(readings[7])
+  Serial.print(",")
+  Serial.print(readings[8])
+  Serial.print(",")
+  Serial.print(readings[9])
+  Serial.print(",")
+  Serial.print(readings[10])
+  Serial.print(",")
+  Serial.print(readings[11])
+  Serial.print(",")
 
-  return redFrequency;  // Return F7 (Red) for the stopping algorithm
+  return readings[0];  // temporary - this needs to be changed #TODO 
 }
 
 // Button Activity
