@@ -75,7 +75,7 @@ double R_Avg_slope;
 double PrintSensorReading() {
   // Read all channels from the AS7341
   uint16_t readings[12]; 
-  // 415nm, 445nm, 480nm, 515nm, 555nm, 590nm, 630nm, 680nm, Clear, NIR 
+  // 415nm, 445nm, 480nm, 515nm, Clear, NIR, 555nm, 590nm, 630nm, 680nm, Clear, NIR, 
   if (!as7341.readAllChannels(readings)) {
     Serial.println("Error reading AS7341 sensor");
     return 0;
@@ -171,7 +171,7 @@ void setup() {
   myservo.attach(servo_pin);
   myservo.writeMicroseconds(start_angle);  // start at 2125
 
-  Serial.begin(9600);                                     // initialize serial
+  Serial.begin(115200);                                     // initialize serial - increased to 115200 from 9600
   Serial.println("Checking for AS7341 color sensor...");  // Initial message
 
   // Check the AS7341 I2C connection
@@ -188,7 +188,7 @@ void setup() {
  // ina226.waitUntilConversionCompleted(); 
   Serial.println("AS7341 sensor detected!");
 
-  as7341.setLEDCurrent(50); // 4mA
+  as7341.setLEDCurrent(50); // 4mA // this is in mA, change the current going to the LED as needed.
   as7341.enableLED(true);
 
   // AS7341 Sensor Configuration setup
@@ -242,6 +242,9 @@ void loop() {
 
     myservo.writeMicroseconds(safe_angle);
 
+    // Reset newStartTime
+    newStartTime = millis();
+
     // Time Sensor Delay for car - syringe 
     // // Have a 3 s delay between pressing the button and adding the starting chemical
     // while (i < 6) {
@@ -284,13 +287,15 @@ void loop() {
     // Timer
     currentTime = millis();
     timeDiff = (currentTime - newStartTime) / 1000;
+    Serial.print(timeDiff);
+    Serial.print(",");
     R_reading = PrintSensorReading();
 
-    Serial.print("Shunt Voltage [mV]: "); Serial.println(shuntVoltage_mV);
-    Serial.print("Bus Voltage [V]: "); Serial.println(busVoltage_V);
-    Serial.print("Load Voltage [V]: "); Serial.println(loadVoltage_V);
-    Serial.print("Current[mA]: "); Serial.println(current_mA);
-    Serial.print("Bus Power [mW]: "); Serial.println(power_mW);
+    // Serial.print("Shunt Voltage [mV]: "); Serial.println(shuntVoltage_mV);
+    // Serial.print("Bus Voltage [V]: "); Serial.println(busVoltage_V);
+    // Serial.print("Load Voltage [V]: "); Serial.println(loadVoltage_V);
+    // Serial.print("Current[mA]: "); Serial.println(current_mA);
+    // Serial.print("Bus Power [mW]: "); Serial.println(power_mW);
 /*    if (!ina226.overflow)
     {
       Serial.println("Values OK - no overflow");
@@ -302,62 +307,13 @@ void loop() {
     Serial.println(); */ 
 
     // Stopping algorithm ***Start***
-    double R_power = pow(R_reading, 4);
-    index_R_array = index_R_total % R_buffer_size;
-    iteration_R = index_R_total / R_buffer_size;  // iteration is an int, so it gets the quotient of the division
-    Array_R_Values[index_R_array] = R_power;
-    index_R_total += 1;
-
-    if (iteration_R > 0) {
-      double R_rollingaverage = calculateRollingAverage();
-      Serial.print(R_rollingaverage);
-      Serial.print(" || ");
-      index_RAvg_array = index_RAvg_total % RAvg_buffer_size;
-      iteration_RAvg = index_RAvg_total / RAvg_buffer_size;  // iteration is an int, so it gets the quotient of the division
-      Array_R_Avg[index_RAvg_array] = R_rollingaverage;
-
-      if (iteration_RAvg > 0) {
-        R_Avg_slope = calculateMovingSlope();
-        Serial.print(R_Avg_slope);
-        Serial.print(" ");
-      } else {
-        Serial.print(" NA");
-      }
-
-      index_RAvg_total += 1;
-
-    } else {
-      Serial.print("NA");
-      Serial.print(" || NA");
-    }
-
-    // Change Output when the reaction reaches Endpoint
-    if (timeDiff < 50) {  // No endpoint detection for the first 50 s
-      Serial.print("|| Time Diff:");
-    } else {
-      // NOTE: Because AS7341 numbers scale differently than the TCS3200,
-      // you may need to invert this < 0 to > 0 depending on the reaction!
-      if (R_Avg_slope < 0) {
-        Serial.print("|| Endpoint Time:");
-        Serial.print(timeDiff, DEC);  // Reaction Endpoint
-        digitalWrite(trans_ctrl, LOW);
-        digitalWrite(LED_BUILTIN, HIGH);
-
-        analogWrite(motor, 0);
-        digitalWrite(motor_relay, LOW);
-
-        while (true)
-          ;
-      } else {
-        Serial.print("|| Time Diff:");
-      }
-    }
+    
     // Stopping algorithm ***End***
 
-    Serial.print(timeDiff, DEC);
+    //Serial.print(timeDiff, DEC);
     Serial.println(" ");
 
-    delay(300);  // adjust how frequently you want the colours to update; decided 0.3 s was optimal
+    delay(50);  // adjust how frequently you want the colours to update; decided 0.3 s was optimal
 
     digitalWrite(trans_ctrl, HIGH);
     digitalWrite(LED_BUILTIN, HIGH);
