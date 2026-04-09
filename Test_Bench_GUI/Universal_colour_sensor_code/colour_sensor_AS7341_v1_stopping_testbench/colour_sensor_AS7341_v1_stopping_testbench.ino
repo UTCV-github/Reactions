@@ -48,7 +48,7 @@ bool released = false;
 bool pressed_down = false;
 bool logging = false;  // Alternating between T and F after every press of the button
 
-const int start_angle = 2100;
+const int start_angle = 1800;
 const int pushdown_angle = 1000;
 const int safe_angle = 1500;
 const int servo_interval = 100;
@@ -180,7 +180,7 @@ void setup() {
     delay(2000);  // Check every 2 seconds
   }
 
-  Wire1.begin();
+  Wire1.begin(); // what does this do?
  /* if (!ina226.init()) {
     Serial.println("Failed to init INA226. Check your wiring.");
     while (1) {}
@@ -188,7 +188,7 @@ void setup() {
  // ina226.waitUntilConversionCompleted(); 
   Serial.println("AS7341 sensor detected!");
 
-  as7341.setLEDCurrent(50); // 4mA // this is in mA, change the current going to the LED as needed.
+  as7341.setLEDCurrent(15); // 4mA // this is in mA, change the current going to the LED as needed.
   as7341.enableLED(true);
 
   // AS7341 Sensor Configuration setup
@@ -223,6 +223,7 @@ void loop() {
 
   if (input == 116) { // 116 = "t"
     logging = false;
+    myservo.writeMicroseconds(start_angle); // reset servo position
   }
 
   if (input == 112) { // 112 = "p"

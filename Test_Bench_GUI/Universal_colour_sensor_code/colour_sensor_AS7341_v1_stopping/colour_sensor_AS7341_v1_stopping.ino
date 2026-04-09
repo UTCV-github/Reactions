@@ -188,7 +188,7 @@ void setup() {
  // ina226.waitUntilConversionCompleted(); 
   Serial.println("AS7341 sensor detected!");
 
-  as7341.setLEDCurrent(50); // 4mA
+  as7341.setLEDCurrent(15); // 4mA
   as7341.enableLED(true);
 
   // AS7341 Sensor Configuration setup
