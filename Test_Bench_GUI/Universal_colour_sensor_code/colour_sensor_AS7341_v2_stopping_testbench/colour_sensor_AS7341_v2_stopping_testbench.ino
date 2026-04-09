@@ -65,8 +65,9 @@ int iteration_R = 0;                  // Number of 50 R-reading cycle
 int index_R_array = 0;                // Index in the Array_R_Values
 const int derivative_first_threshold = -5000; // threshold for derivative to be negative for the first threshold to be hit
 const int derivative_second_threshold = 0;
-const num_consecutive_readings_required = 5; // requires 5 consecutive readings that calculate a derivative that are beyond the threshold
+const int num_consecutive_readings_required = 5; // requires 5 consecutive readings that calculate a derivative that are beyond the threshold
 int num_first_threshold = 0; // number of last readings that reached the threshold
+int num_second_threshold = 0; // number of last readings that reached the threshold
 bool first_threshold_reached = false; // flag for reaching the first threshold
 bool second_threshold_reached = false; // flag for reaching the second threshold
 bool car_stopped = false;
@@ -80,48 +81,11 @@ int index_derivative_array = 0;
 /*END*/
 
 double PrintSensorReading() {
-  // Read all channels from the AS7341
-  uint16_t readings[12]; 
-  // 415nm, 445nm, 480nm, 515nm, Clear, NIR, 555nm, 590nm, 630nm, 680nm, Clear, NIR, 
-  if (!as7341.readAllChannels(readings)) {
-    Serial.println("Error reading AS7341 sensor");
-    return 0;
-  }
-
-  // Map AS7341 spectral channels to RGB/Clear equivalents
-  // F7 (630nm) or F8 (680nm) can act as Red. We'll use F7 here.
-  redFrequency = as7341.getChannel(AS7341_CHANNEL_630nm_F7);
-  greenFrequency = as7341.getChannel(AS7341_CHANNEL_515nm_F4);
-  blueFrequency = as7341.getChannel(AS7341_CHANNEL_445nm_F2);
-  clearFrequency = as7341.getChannel(AS7341_CHANNEL_CLEAR);
-
-  // Print out the sensor readings
-  Serial.print(readings[0]);
-  Serial.print(",");
-  Serial.print(readings[1]);
-  Serial.print(",");
-  Serial.print(readings[2]);
-  Serial.print(",");
-  Serial.print(readings[3]);
-  Serial.print(",");
-  Serial.print(readings[4]);
-  Serial.print(",");
-  Serial.print(readings[5]);
-  Serial.print(",");
-  Serial.print(readings[6]);
-  Serial.print(",");
-  Serial.print(readings[7]);
-  Serial.print(",");
-  Serial.print(readings[8]);
-  Serial.print(",");
-  Serial.print(readings[9]);
-  Serial.print(",");
-  Serial.print(readings[10]);
-  Serial.print(",");
-  Serial.print(readings[11]);
+  redFrequency = as7341.getChannel(AS7341_CHANNEL_555nm_F5); // pick 555nm as the best for sensing
+  Serial.print(redFrequency);
   Serial.print(",");
 
-  return readings[0];  // temporary - this needs to be changed #TODO 
+  return redFrequency;
 }
 
 // Button Activity
@@ -143,24 +107,6 @@ bool ButtonPress(int button_pin, bool &logging, bool &pressed_down, bool &releas
     }
   }
   return false;  // Indicate no button press action
-}
-
-// Calculate Rolling average of the R readings
-double calculateRollingAverage() {
-  double sum = 0.0;
-  for (int j = 0; j < R_buffer_size; j++) {
-    sum += Array_R_Values[j];
-  }
-  return sum / R_buffer_size;
-}
-
-double calculateMovingSlope() {
-  double sumFirst = 0.0, sumLast = 0.0;
-  for (int j = 0; j < 8; j++) {
-    sumLast += Array_R_Avg[(index_RAvg_total - j) % RAvg_buffer_size];                          // The sum of last values in the rolling range
-    sumFirst += Array_R_Avg[(index_RAvg_total + 1 - RAvg_buffer_size + j) % RAvg_buffer_size];  // The sum of first values in the rolling range
-  }
-  return sumFirst - sumLast;
 }
 
 void setup() {
@@ -202,8 +148,8 @@ void setup() {
   // You can adjust ATIME, ASTEP, and GAIN to increase/decrease sensitivity
   // total acquisition time = (𝐴𝑇𝐼𝑀𝐸 + 1) × (𝐴𝑆𝑇𝐸𝑃 + 1) × 2.78µs (microsecond = 1/1000th of second) 
   // see https://newscrewdriver.com/2023/01/23/notes-on-as7341-integration-time/
-  as7341.setATIME(100);
-  as7341.setASTEP(999);
+  as7341.setATIME(29);
+  as7341.setASTEP(599);
   as7341.setGain(AS7341_GAIN_256X);
 }
 
@@ -248,43 +194,11 @@ void loop() {
 
     delay(1000);
     digitalWrite(motor_relay, HIGH);
-
+    // Reset newStartTime - begin recording time as soon as the car starts moving
+    newStartTime = millis();
     myservo.writeMicroseconds(safe_angle);
 
-    // Reset newStartTime
-    newStartTime = millis();
-
-    // Time Sensor Delay for car - syringe 
-    // // Have a 3 s delay between pressing the button and adding the starting chemical
-    // while (i < 6) {
-    //   i++;
-
-    //   // Obtain initial red frequency values from AS7341
-    //   as7341.readAllChannels();
-    //   initialRed = as7341.getChannel(AS7341_CHANNEL_630nm_F7);
-
-    //   Serial.print("R: ");
-    //   Serial.print(initialRed, DEC);
-    //   Serial.println(" ");  // Print out the red value
-    //   delay(500);           //Delay 0.5 sec between each reading
-
-    //   // Check Input/button activity
-    //   input = Serial.read();
-    //   if (input == 116) {
-    //     logging = false;
-    //   }
-
-    //   if (ButtonPress(button, logging, pressed_down, released, i) || input == 116) {
-    //     delay(100);
-    //     break;
-    //   }
-
-    //   // If all 6 R initial reading are printted, print the start msg
-    //   if (i == 6) {
-    //     newStartTime = millis();  // Obtain a new starttime
-    //     Serial.println("Reaction Starts Now!");
-    //   }
-      // }
+    
   }
 
   else if ((logging == false)) {  //Skip the printing part if logging is false
@@ -316,13 +230,87 @@ void loop() {
     Serial.println(); */ 
 
     // Stopping algorithm ***Start***
-    
+    // not taking a running average because this sensor is very noise-less
+    Array_R_Values[index_R_array] = R_reading;
+
+    if (index_R_total > num_init_readings_ignore) {
+      int first_5_avg = 0;
+      int last_5_avg = 0;
+      for (int i = 0; i < avg_window; i++) {
+        int idx = (index_derivative_array + derivative_array_size - (derivative_span-1) + i) % derivative_array_size;
+        first_5_avg += Array_R_Values[idx];
+      }
+      for (int i = 0; i < avg_window; i++) {
+        int idx = (index_derivative_array + derivative_array_size - i) % derivative_array_size;
+        last_5_avg += Array_R_Values[idx];
+      }
+      float calculated_derivative = (float)(last_5_avg - first_5_avg) / (derivative_span - avg_window);
+      derivative_R_array[index_derivative_array] = calculated_derivative;
+      
+
+      // Check for reaching the first threshold and increment if we are.
+      if (calculated_derivative < derivative_first_threshold) {
+        num_first_threshold++;
+      } else {
+        num_first_threshold = 0;
+      }
+
+      if (num_first_threshold >= num_consecutive_readings_required) {
+        first_threshold_reached = true;
+      }
+
+      // Check for reaching the second threshold and increment if we are.
+      if (first_threshold_reached && (calculated_derivative > derivative_second_threshold)) {
+        num_second_threshold++;
+      } else {
+        num_second_threshold = 0;
+      }
+
+      if (first_threshold_reached && (num_second_threshold >= num_consecutive_readings_required)) {
+        second_threshold_reached = true;
+        
+        // STOP THE CAR
+        if (car_stopped == false) {
+          digitalWrite(motor_relay, LOW);
+        }
+        
+      }
+
+      // Print to Serial Monitor
+      Serial.print(calculated_derivative);
+      Serial.print(",");
+      Serial.print(num_first_threshold);
+      Serial.print(",");
+      Serial.print(num_second_threshold);
+      Serial.print(",");
+
+      Serial.print(first_threshold_reached);
+      Serial.print(",");
+      Serial.print(second_threshold_reached);
+      Serial.print(",");
+
+      if ((car_stopped == false) && (second_threshold_reached == true)) {
+        Serial.print("Endpoint Detected");
+        Serial.print(",");
+      }
+      
+      // increment derivative tracker index
+      index_derivative_array++;
+    }
+
+    // increment array tracker index
+    index_R_array++;
+    index_R_total++;
+
+    // Loop array indices back to 0 if we exceed array size
+    if (index_R_array == R_buffer_size) {index_R_array = 0;}
+
     // Stopping algorithm ***End***
 
     //Serial.print(timeDiff, DEC);
     Serial.println(" ");
 
-    delay(50);  // adjust how frequently you want the colours to update; decided 0.3 s was optimal
+    delay(50);  // ADJUST REPEAT FREQUENCY DELAY - note - limited by ATIME and ASTEP above
 
     digitalWrite(trans_ctrl, HIGH);
     digitalWrite(LED_BUILTIN, HIGH);
