@@ -89,6 +89,7 @@ double PrintSensorReading() {
   clearFrequency = as7341.getChannel(AS7341_CHANNEL_CLEAR);
 
   // Print out the sensor readings
+<<<<<<< Updated upstream
   Serial.print(readings[0]);
   Serial.print(",");
   Serial.print(readings[1]);
@@ -113,6 +114,33 @@ double PrintSensorReading() {
   Serial.print(",");
   Serial.print(readings[11]);
   Serial.print(",");
+=======
+  // look into bitboards which are faster than arrays - arabella
+  Serial.print(readings[0])
+  Serial.print(",")
+  Serial.print(readings[1])
+  Serial.print(",")
+  Serial.print(readings[2])
+  Serial.print(",")
+  Serial.print(readings[3])
+  Serial.print(",")
+  Serial.print(readings[4])
+  Serial.print(",")
+  Serial.print(readings[5])
+  Serial.print(",")
+  Serial.print(readings[6])
+  Serial.print(",")
+  Serial.print(readings[7])
+  Serial.print(",")
+  Serial.print(readings[8])
+  Serial.print(",")
+  Serial.print(readings[9])
+  Serial.print(",")
+  Serial.print(readings[10])
+  Serial.print(",")
+  Serial.print(readings[11])
+  Serial.print(",")
+>>>>>>> Stashed changes
 
   return readings[0];  // temporary - this needs to be changed #TODO 
 }
