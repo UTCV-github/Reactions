@@ -48,24 +48,24 @@ bool released = false;
 bool pressed_down = false;
 bool logging = false;  // Alternating between T and F after every press of the button
 
-const int start_angle = 2100;
-const int pushdown_angle = 1000;
-const int safe_angle = 1500;
+const int start_angle = 1800;
+const int pushdown_angle = 700;
+const int safe_angle = 1800;
 const int servo_interval = 100;
 
 // Stopping algorithm code
-double initialRed = 0;
 double R_reading;
 
+const bool DEBUG_PRINT = false;
 const int num_init_readings_ignore = 15; // ignore the first 15 readings
 const int R_buffer_size = 50;         // size of the buffer
 uint16_t Array_R_Values[R_buffer_size];  // Array to store 50 latest readings
 int index_R_total = 0;                // Number of total R readings recorded
 int iteration_R = 0;                  // Number of 50 R-reading cycle
 int index_R_array = 0;                // Index in the Array_R_Values
-const int derivative_first_threshold = -5000; // threshold for derivative to be negative for the first threshold to be hit
+const int derivative_first_threshold = -100; // threshold for derivative to be negative for the first threshold to be hit
 const int derivative_second_threshold = 0;
-const int num_consecutive_readings_required = 5; // requires 5 consecutive readings that calculate a derivative that are beyond the threshold
+const int num_consecutive_readings_required = 15; // requires 15 consecutive readings that calculate a derivative that are beyond the threshold
 int num_first_threshold = 0; // number of last readings that reached the threshold
 int num_second_threshold = 0; // number of last readings that reached the threshold
 bool first_threshold_reached = false; // flag for reaching the first threshold
@@ -80,12 +80,36 @@ float derivative_R_array[derivative_array_size];
 int index_derivative_array = 0;
 /*END*/
 
-double PrintSensorReading() {
-  redFrequency = as7341.getChannel(AS7341_CHANNEL_555nm_F5); // pick 555nm as the best for sensing
-  Serial.print(redFrequency);
+uint16_t PrintSensorReading() {
+  uint16_t readings[12];
+  if (!as7341.readAllChannels(readings)){
+    Serial.println("Error reading all channels!");
+    return;
+  }
+
+  // Print out the sensor readings
+  Serial.print(readings[0]); // 415nm
+  Serial.print(",");
+  Serial.print(readings[1]); // 445nm
+  Serial.print(",");
+  Serial.print(readings[2]); // 480nm
+  Serial.print(",");
+  Serial.print(readings[3]); // 515nm
+  Serial.print(",");
+  Serial.print(readings[6]); // 555nm
+  Serial.print(",");
+  Serial.print(readings[7]); // 590nm
+  Serial.print(",");
+  Serial.print(readings[8]); // 630nm
+  Serial.print(",");
+  Serial.print(readings[9]); // 680nm
+  Serial.print(",");
+  Serial.print(readings[10]); // Clear
+  Serial.print(",");
+  Serial.print(readings[11]); // NIR
   Serial.print(",");
 
-  return redFrequency;
+  return readings[6];
 }
 
 // Button Activity
@@ -148,8 +172,8 @@ void setup() {
   // You can adjust ATIME, ASTEP, and GAIN to increase/decrease sensitivity
   // total acquisition time = (𝐴𝑇𝐼𝑀𝐸 + 1) × (𝐴𝑆𝑇𝐸𝑃 + 1) × 2.78µs (microsecond = 1/1000th of second) 
   // see https://newscrewdriver.com/2023/01/23/notes-on-as7341-integration-time/
-  as7341.setATIME(29);
-  as7341.setASTEP(599);
+  as7341.setATIME(29); // 29 default
+  as7341.setASTEP(599); // 599 default
   as7341.setGain(AS7341_GAIN_256X);
 }
 
@@ -174,10 +198,27 @@ void loop() {
   if (input == 115) { // 115 = "s"
     logging = true;
     i = 0;  // reset counter i
+    // reset counters
+
   }
 
   if (input == 116) { // 116 = "t"
+    Serial.println("LOGGING END - RESETTING VARIABLES");
     logging = false;
+    myservo.writeMicroseconds(start_angle); // reset servo position
+    // reset counters
+    for (i = 0; i < R_buffer_size; i++) {Array_R_Values[i] = 0;}
+    index_R_total = 0;                // Number of total R readings recorded
+    iteration_R = 0;                  // Number of 50 R-reading cycle
+    index_R_array = 0;                // Index in the Array_R_Values
+    num_first_threshold = 0; // number of last readings that reached the threshold
+    num_second_threshold = 0; // number of last readings that reached the threshold
+    first_threshold_reached = false; // flag for reaching the first threshold
+    second_threshold_reached = false; // flag for reaching the second threshold
+    car_stopped = false;
+
+    for (i = 0; i < derivative_array_size; i++) {derivative_R_array[i] = 0;}
+    index_derivative_array = 0;
   }
 
   if (input == 112) { // 112 = "p"
@@ -192,7 +233,7 @@ void loop() {
 
     myservo.writeMicroseconds(pushdown_angle);
 
-    delay(1000);
+    delay(2000); // wait 2 seconds before starting up
     digitalWrite(motor_relay, HIGH);
     // Reset newStartTime - begin recording time as soon as the car starts moving
     newStartTime = millis();
@@ -232,17 +273,38 @@ void loop() {
     // Stopping algorithm ***Start***
     // not taking a running average because this sensor is very noise-less
     Array_R_Values[index_R_array] = R_reading;
+    Serial.print(index_R_total);
+    Serial.print(",");
 
-    if (index_R_total > num_init_readings_ignore) {
-      int first_5_avg = 0;
-      int last_5_avg = 0;
+    if (index_R_total > derivative_span) {
+      float first_5_avg = 0;
+      float last_5_avg = 0;
+      if (DEBUG_PRINT) {
+        Serial.println("");
+        Serial.print("[");
+        for (int i = 0; i < derivative_array_size; i++) {
+          Serial.print(Array_R_Values[i]);
+          Serial.print(",");
+        }
+        Serial.print("]");
+        Serial.println("");
+      }
+      
       for (int i = 0; i < avg_window; i++) {
-        int idx = (index_derivative_array + derivative_array_size - (derivative_span-1) + i) % derivative_array_size;
+        int idx = (index_R_array + derivative_array_size - (derivative_span-1) + i) % derivative_array_size;
         first_5_avg += Array_R_Values[idx];
       }
       for (int i = 0; i < avg_window; i++) {
-        int idx = (index_derivative_array + derivative_array_size - i) % derivative_array_size;
+        int idx = (index_R_array + derivative_array_size - i) % derivative_array_size;
         last_5_avg += Array_R_Values[idx];
+      }
+
+      if (DEBUG_PRINT){
+        Serial.print(",");
+        Serial.print(first_5_avg);
+        Serial.print(",");
+        Serial.print(last_5_avg);
+        Serial.print(",");
       }
       float calculated_derivative = (float)(last_5_avg - first_5_avg) / (derivative_span - avg_window);
       derivative_R_array[index_derivative_array] = calculated_derivative;
@@ -290,12 +352,13 @@ void loop() {
       Serial.print(",");
 
       if ((car_stopped == false) && (second_threshold_reached == true)) {
-        Serial.print("Endpoint Detected");
+        Serial.print("E2_Detected");
         Serial.print(",");
       }
       
       // increment derivative tracker index
       index_derivative_array++;
+      if (index_derivative_array == derivative_array_size) {index_derivative_array = 0;}
     }
 
     // increment array tracker index
@@ -310,7 +373,7 @@ void loop() {
     //Serial.print(timeDiff, DEC);
     Serial.println(" ");
 
-    delay(50);  // ADJUST REPEAT FREQUENCY DELAY - note - limited by ATIME and ASTEP above
+    delay(50);  // set to 50 ADJUST REPEAT FREQUENCY DELAY - note - limited by ATIME and ASTEP above
 
     digitalWrite(trans_ctrl, HIGH);
     digitalWrite(LED_BUILTIN, HIGH);
