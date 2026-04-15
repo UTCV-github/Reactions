@@ -48,10 +48,10 @@ bool released = false;
 bool pressed_down = false;
 bool logging = false;  // Alternating between T and F after every press of the button
 
-const int start_angle = 2100; // 1800
-const int pushdown_angle = 1000; // 700
-const int safe_angle = 1500; // 1800
-const int servo_interval = 100; // 100
+const int start_angle = 2100;
+const int pushdown_angle = 1000;
+const int safe_angle = 1500;
+const int servo_interval = 100;
 
 // Stopping algorithm code
 double R_reading;
@@ -205,8 +205,8 @@ void loop() {
   if (input == 116) { // 116 = "t"
     Serial.println("LOGGING END - RESETTING VARIABLES");
     logging = false;
+
     myservo.writeMicroseconds(start_angle); // reset servo position
-    digitalWrite(motor_relay, LOW); // turn off motor, if it is on the car.
     // reset counters
     for (i = 0; i < R_buffer_size; i++) {Array_R_Values[i] = 0;}
     index_R_total = 0;                // Number of total R readings recorded
@@ -229,7 +229,7 @@ void loop() {
 
   // if (Button_Pressed) {  //if button has been pressed and released
   if ((Button_Pressed && logging) || input == 115) {  //if button has been pressed and released
-    // Serial.println("\nREACTION REACTION REACTION");
+    Serial.println("\nREACTION REACTION REACTION");
     released = false;
 
     for (int i = start_angle; i > pushdown_angle; i -= 50) {
